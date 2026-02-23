@@ -83,12 +83,32 @@ async function fetchVideos(query = "") {
 }
 
 async function executeSearch(finalQuery) {
-    const { data, error } = await client.rpc('search_videos_prioritized', {
-        search_term: finalQuery
-    });
-    if (!error) renderVideoGrid(data);
-}
+    try {
+        // אנחנו מבצעים חיפוש שסורק את כל העמודות שביקשת
+        // העמודה fts_doc אמורה להכיל את האינדקס של כל השדות האלו ב-Supabase
+        const { data, error } = await client
+            .from('videos')
+            .select('*')
+            .or(`title.fts.${finalQuery},description.fts.${finalQuery},categories.fts.${finalQuery},tags.fts.${finalQuery}`)
+            .order('added_at', { ascending: false });
 
+        if (error) throw error;
+        renderVideoGrid(data);
+    } catch (error) {
+        console.error("Search execution error:", error);
+        
+        // במידה ויש בעיה בחיפוש ה-fts המשולב, נבצע חיפוש רחב עם ilike
+        // שיבדוק לפחות את הכותרת והתיאור
+        const cleanQuery = finalQuery.split('|')[0].trim();
+        const { data: fallbackData } = await client
+            .from('videos')
+            .select('*')
+            .or(`title.ilike.%${cleanQuery}%,description.ilike.%${cleanQuery}%`)
+            .limit(20);
+        
+        if (fallbackData) renderVideoGrid(fallbackData);
+    }
+}
 function renderVideoGrid(data) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
