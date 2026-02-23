@@ -112,18 +112,20 @@ function renderVideoGrid(data) {
     grid.innerHTML = data.map(v => {
         const safeTitle = (v.title || "").replace(/'/g, "\\'");
         const safeChannel = (v.channel_title || "").replace(/'/g, "\\'");
+        const safeDesc = v.description || "אין תיאור זמין";
         
         return `
             <div class="v-card" onclick="playVideo('${v.id}', '${safeTitle}', '${safeChannel}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail || ''}" loading="lazy">
+                    <div class="video-description-overlay">${safeDesc}</div>
                     <button class="play-overlay-btn"><i class="fa-solid fa-play"></i></button>
                 </div>
                 <h3>${v.title || ''}</h3>
                 <div class="card-footer">
                     <span>${v.channel_title || ''}</span>
                     <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${v.id}')">
-                        <i class="fa-regular fa-heart" id="fav-icon-${v.id}"></i>
+                        <i class="fa-regular fa-heart" id="fav-icon-${videoId}"></i>
                     </button>
                 </div>
             </div>
