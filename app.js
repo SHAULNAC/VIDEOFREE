@@ -9,17 +9,15 @@ let currentResults = []; // מאגר התוצאות המוצגות כרגע
 
 // --- פונקציות עזר ---
 
-// פונקציה להצגת/הסתרת הספינר
 function toggleSpinner(show) {
     const spinner = document.getElementById('searchSpinner');
     if (spinner) spinner.style.display = show ? 'block' : 'none';
 }
 
-// פונקציית התרגום החכמה עם Cache (סעיף 2 שבנינו)
 async function getSmartTranslation(text) {
     const cleanText = text.trim().toLowerCase();
     
-    // 1. בדיקה במטמון ב-Supabase
+    // 1. בדיקה במטמון
     const { data: cacheEntry } = await client
         .from('translation_cache')
         .select('translated_text')
@@ -28,14 +26,13 @@ async function getSmartTranslation(text) {
 
     if (cacheEntry) return cacheEntry.translated_text;
 
-    // 2. פנייה לגוגל אם לא נמצא במטמון
+    // 2. פנייה לגוגל
     try {
         const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=iw&tl=en&dt=t&q=${encodeURI(cleanText)}`);
         const data = await res.json();
         const translated = data[0][0][0];
 
         if (translated && translated.toLowerCase() !== cleanText) {
-            // שמירה למטמון לשימוש עתידי (בשביל עשרות אלפי המשתמשים הבאים)
             await client.from('translation_cache').insert([
                 { original_text: cleanText, translated_text: translated }
             ]);
@@ -52,7 +49,6 @@ async function getSmartTranslation(text) {
 async function performSearch(query, isTranslation = false) {
     if (!query) return;
 
-    // חיפוש גמיש בטבלת הסרטונים (בדומה ל-Regex)
     const { data, error } = await client
         .from('videos')
         .select('*')
@@ -64,15 +60,16 @@ async function performSearch(query, isTranslation = false) {
     }
 
     if (isTranslation) {
-        // הוספת תוצאות התרגום לתוצאות הקיימות (מניעת כפילויות)
         const existingIds = new Set(currentResults.map(v => v.id));
         const filteredNewData = data.filter(v => !existingIds.has(v.id));
         currentResults = [...currentResults, ...filteredNewData];
     } else {
         currentResults = data;
     }
+    
+    renderGrid(currentResults);
+}
 
-// פונקציה לטעינת כל הסרטונים כשפותחים את האתר
 async function loadAllVideos() {
     toggleSpinner(true);
     const { data, error } = await client
@@ -89,7 +86,7 @@ async function loadAllVideos() {
     toggleSpinner(false);
 }
 
-// קריאה לפונקציה כשהדף נטען
+// קריאה ראשונית בטעינת הדף
 document.addEventListener('DOMContentLoaded', loadAllVideos);
 
 function renderGrid(videos) {
@@ -102,11 +99,9 @@ function renderGrid(videos) {
     }
 
     container.innerHTML = videos.map(video => {
-        // --- בדיקה חשובה ---
-        // וודא ש-thumbnail_url הוא השם הנכון בטבלה שלך. 
-        // אם בטבלה זה נקרא thumbnail, שנה את זה כאן למטה.
-        const imgUrl =  video.thumbnail || 'placeholder.jpg';
-        const videoId = video.youtube_id || video.video_id;
+        // התאמה למבנה הנתונים שלך
+        const imgUrl = video.thumbnail || video.thumbnail_url || 'placeholder.jpg';
+        const videoId = video.video_id || video.youtube_id;
         const videoLink = `https://www.youtube.com/watch?v=${videoId}`;
         
         return `
@@ -125,33 +120,33 @@ function renderGrid(videos) {
         `;
     }).join('');
 }
-// --- מאזין אירועים (Event Listener) ---
+
+// --- מאזין אירועים ---
 
 document.getElementById('globalSearch').addEventListener('input', (e) => {
     const val = e.target.value.trim();
     
     if (!val) {
-        // אם החיפוש התרוקן, טען את כל הסרטונים (או נקה)
-        location.reload(); 
+        loadAllVideos(); // טעינה מחדש של הכל כשמוחקים את החיפוש
         return;
     }
 
-    // 1. חיפוש מקומי מהיר (300ms) - קורה בזמן הקלדה
+    // 1. חיפוש מקומי מהיר
     clearTimeout(localSearchTimer);
     localSearchTimer = setTimeout(() => {
         performSearch(val, false);
     }, 300);
 
-    // 2. תרגום וחיזוק תוצאות (900ms) - קורה בסיום ההקלדה
+    // 2. תרגום וחיזוק תוצאות
     clearTimeout(translationTimer);
     translationTimer = setTimeout(async () => {
         if (val.length > 2 && /[\u0590-\u05FF]/.test(val)) {
-            toggleSpinner(true); // הצגת ספינר
+            toggleSpinner(true);
             const translated = await getSmartTranslation(val);
             if (translated) {
                 await performSearch(translated, true);
             }
-            toggleSpinner(false); // הסתרת ספינר
+            toggleSpinner(false);
         }
     }, 900);
 });
