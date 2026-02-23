@@ -4,60 +4,52 @@ const SB_KEY = 'sb_publishable_2JftgVsArBG2NB-RXp0q4Q_jdd8VfPO';
 const client = supabase.createClient(SB_URL, SB_KEY);
 
 let translationTimer = null;
-let currentLocalData = []; // שמירת נתוני המקור
+let currentLocalData = []; 
 
-// --- פונקציות תרגום ו-Cache ---
-
+// --- מנוע תרגום חכם עם עדיפות למאגר שלך ---
 async function getSmartTranslation(text) {
     const cleanText = text.trim().toLowerCase();
     
-    // 1. בדיקה במטמון (Cache)
+    // בדיקה במאגר המתורגם (Cache) - אם נמצא, הוא לא פונה לגוגל!
     const { data: cacheEntry } = await client
         .from('translation_cache')
         .select('translated_text')
         .eq('original_text', cleanText)
         .single();
 
-    if (cacheEntry) return cacheEntry.translated_text;
+    if (cacheEntry) {
+        console.log("נמצא במאגר הפנימי, חוסך פנייה לגוגל");
+        return cacheEntry.translated_text;
+    }
 
-    // 2. פנייה לגוגל ושמירה למטמון
+    // רק אם לא נמצא במאגר הפנימי - פונה לתרגום
     try {
         const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=iw&tl=en&dt=t&q=${encodeURI(cleanText)}`);
         const data = await res.json();
         const translated = data[0][0][0];
 
         if (translated && translated.toLowerCase() !== cleanText) {
+            // שומר למאגר כדי שבפעם הבאה זה יהיה מיידי
             await client.from('translation_cache').insert([{ original_text: cleanText, translated_text: translated }]);
             return translated;
         }
-    } catch (e) { console.error("Translation error", e); }
+    } catch (e) { return null; }
     return null;
 }
 
-function toggleSpinner(show) {
-    const spinner = document.getElementById('searchSpinner');
-    if (spinner) spinner.style.display = show ? 'block' : 'none';
-}
-
-// --- ליבת המערכת ---
-
+// --- פונקציית החיפוש ---
 async function fetchVideos(query = "", isAppend = false) {
     let request = client.from('videos').select('*');
 
     if (query) {
-        // חיפוש "על הכל" (כותרת, תיאור, ערוץ)
-        request = request.or(`title.ilike.%${query}%,description.ilike.%${query}%,channel_title.ilike.%${query}%`);
+        request = request.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
     }
 
     const { data, error } = await request.order('added_at', { ascending: false });
 
-    if (error) {
-        console.error(error);
-        return;
-    }
+    if (error) return;
 
     if (isAppend) {
-        // מיזוג תוצאות התרגום עם הקיימות ומניעת כפילויות
         const combined = [...currentLocalData, ...data];
         const unique = Array.from(new Map(combined.map(v => [v.id, v])).values());
         renderGrid(unique);
@@ -67,57 +59,44 @@ async function fetchVideos(query = "", isAppend = false) {
     }
 }
 
-// --- המאזין לחיפוש ---
-
-document.getElementById('globalSearch').addEventListener('input', (e) => {
-    const val = e.target.value.trim();
-    
-    if (!val) {
-        fetchVideos(""); // טעינה מחדש של הכל
-        return;
-    }
-
-    // 1. חיפוש מיידי (שפת מקור)
-    fetchVideos(val, false);
-
-    // 2. תרגום Cache/Google (מושהה)
-    clearTimeout(translationTimer);
-    if (val.length > 2 && /[\u0590-\u05FF]/.test(val)) {
-        translationTimer = setTimeout(async () => {
-            toggleSpinner(true);
-            const translated = await getSmartTranslation(val);
-            if (translated) {
-                await fetchVideos(translated, true);
-            }
-            toggleSpinner(false);
-        }, 850);
-    }
-});
-
-// --- פונקציית הרינדור (התבנית המקורית שלך) ---
-
+// --- רינדור הגריד (כאן התיקון הויזואלי) ---
 function renderGrid(videos) {
     const container = document.getElementById('videoGrid');
     if (!container) return;
     
-    // תיקון ה-Layout (שמירה על 5 בטור אם הגדרת ב-CSS)
-    // אם ה-CSS שלך משתנה בחיפוש, נוודא שהקלאס נשאר קבוע
-    container.className = "video-grid-container"; 
-
+    // החזרת המבנה הפשוט והמקורי שלך בלי "עטיפות" מיותרות ששוברות את ה-CSS
     container.innerHTML = videos.map(video => `
-        <div class="video-card">
+        <div class="video-item">
             <a href="https://www.youtube.com/watch?v=${video.video_id || video.youtube_id}" target="_blank">
-                <div class="thumbnail-wrapper">
-                    <img src="${video.thumbnail || video.thumbnail_url}" alt="${video.title}">
-                </div>
-                <div class="video-details">
-                    <h3>${video.title}</h3>
-                    <p>${video.channel_title || ''}</p>
-                </div>
+                <img src="${video.thumbnail || video.thumbnail_url}" alt="${video.title}">
+                <div class="video-title">${video.title}</div>
             </a>
         </div>
     `).join('');
 }
 
-// טעינה ראשונית
+// --- מאזין חיפוש ---
+document.getElementById('globalSearch').addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    
+    if (!val) {
+        fetchVideos(""); 
+        return;
+    }
+
+    // 1. חיפוש מיידי
+    fetchVideos(val, false);
+
+    // 2. תרגום (רק אם עצרנו את ההקלדה)
+    clearTimeout(translationTimer);
+    if (val.length > 2 && /[\u0590-\u05FF]/.test(val)) {
+        translationTimer = setTimeout(async () => {
+            const translated = await getSmartTranslation(val);
+            if (translated) {
+                await fetchVideos(translated, true);
+            }
+        }, 800);
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => fetchVideos(""));
