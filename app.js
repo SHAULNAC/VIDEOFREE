@@ -105,29 +105,26 @@ function renderVideoGrid(data) {
     if (!grid) return;
     
     if (!data || data.length === 0) {
-        grid.innerHTML = '<p style="padding:20px; text-align:center;">לא נמצאו סרטונים...</p>';
+        grid.innerHTML = '<p style="padding:20px; text-align:center; color: #b3b3b3;">לא נמצאו סרטונים...</p>';
         return;
     }
 
     grid.innerHTML = data.map(v => {
         const safeTitle = (v.title || "").replace(/'/g, "\\'");
         const safeChannel = (v.channel_title || "").replace(/'/g, "\\'");
-        const safeDesc = v.description || "אין תיאור זמין";
-
+        
         return `
             <div class="v-card" onclick="playVideo('${v.id}', '${safeTitle}', '${safeChannel}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail || ''}" loading="lazy">
                     <button class="play-overlay-btn"><i class="fa-solid fa-play"></i></button>
-                    
-                    <div class="video-description-overlay">
-                        ${safeDesc}
-                    </div>
                 </div>
                 <h3>${v.title || ''}</h3>
                 <div class="card-footer">
                     <span>${v.channel_title || ''}</span>
-                    <i class="fa-regular fa-heart" onclick="event.stopPropagation(); toggleFavorite('${v.id}')" id="fav-icon-${v.id}"></i>
+                    <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${v.id}')">
+                        <i class="fa-regular fa-heart" id="fav-icon-${v.id}"></i>
+                    </button>
                 </div>
             </div>
         `;
