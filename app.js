@@ -92,33 +92,40 @@ async function executeSearch(finalQuery) {
     renderVideoGrid(data);
 }
 
-function renderVideoGrid(data) {
+let currentDisplayedVideos = [];
+
+function renderVideoGrid(data, isAppend = false) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
-    
-    if (!data || data.length === 0) {
+
+    if (!isAppend) {
+        currentDisplayedVideos = data || [];
+    } else {
+        // מיזוג תוצאות חדשות ושמירה על ייחודיות לפי ID
+        const existingIds = new Set(currentDisplayedVideos.map(v => v.id));
+        const newUniqueVideos = data.filter(v => !existingIds.has(v.id));
+        currentDisplayedVideos = [...currentDisplayedVideos, ...newUniqueVideos];
+    }
+
+    if (currentDisplayedVideos.length === 0) {
         grid.innerHTML = '<p style="padding:20px; text-align:center;">לא נמצאו סרטונים...</p>';
         return;
     }
 
-    grid.innerHTML = data.map(v => {
-        // טיפול בערכי null כדי למנוע את שגיאת ה-replace
-        const safeTitle = (v.title || "ללא כותרת").replace(/'/g, "\\'");
-        const safeChannel = (v.channel_title || "ערוץ לא ידוע").replace(/'/g, "\\'");
-        
+    grid.innerHTML = currentDisplayedVideos.map(v => {
+        const safeTitle = (v.title || "").replace(/'/g, "\\'");
+        const safeChannel = (v.channel_title || "").replace(/'/g, "\\'");
         return `
             <div class="v-card" onclick="playVideo('${v.id}', '${safeTitle}', '${safeChannel}')">
                 <div class="card-img-container">
-                    <img src="${v.thumbnail || ''}" alt="">
+                    <img src="${v.thumbnail || ''}">
                     <button class="play-overlay-btn"><i class="fa-solid fa-play"></i></button>
                 </div>
                 <h3>${v.title || ''}</h3>
                 <div class="card-footer">
                     <span>${v.channel_title || ''}</span>
-                    <i class="fa-regular fa-heart" onclick="event.stopPropagation(); toggleFavorite('${v.id}')" id="fav-icon-${v.id}"></i>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
 }
 
