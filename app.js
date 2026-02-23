@@ -72,40 +72,59 @@ async function performSearch(query, isTranslation = false) {
         currentResults = data;
     }
 
-    renderGrid(currentResults);
+// פונקציה לטעינת כל הסרטונים כשפותחים את האתר
+async function loadAllVideos() {
+    toggleSpinner(true);
+    const { data, error } = await client
+        .from('videos')
+        .select('*')
+        .order('added_at', { ascending: false });
+
+    if (error) {
+        console.error("Error loading videos:", error);
+    } else {
+        currentResults = data;
+        renderGrid(data);
+    }
+    toggleSpinner(false);
 }
 
-// פונקציה לרינדור הגלריה (וודא שהיא קיימת אצלך)
+// קריאה לפונקציה כשהדף נטען
+document.addEventListener('DOMContentLoaded', loadAllVideos);
+
 function renderGrid(videos) {
     const container = document.getElementById('videoGrid');
     if (!container) return;
     
-    if (videos.length === 0) {
-        container.innerHTML = '<p class="no-results">לא נמצאו סרטונים תואמים...</p>';
+    if (!videos || videos.length === 0) {
+        container.innerHTML = '<p class="no-results">לא נמצאו סרטונים...</p>';
         return;
     }
 
     container.innerHTML = videos.map(video => {
-        // יצירת לינק בטוח ליוטיוב
-        const videoLink = `https://www.youtube.com/watch?v=${video.youtube_id}`;
+        // --- בדיקה חשובה ---
+        // וודא ש-thumbnail_url הוא השם הנכון בטבלה שלך. 
+        // אם בטבלה זה נקרא thumbnail, שנה את זה כאן למטה.
+        const imgUrl =  video.thumbnail || 'placeholder.jpg';
+        const videoId = video.youtube_id || video.video_id;
+        const videoLink = `https://www.youtube.com/watch?v=${videoId}`;
         
         return `
             <div class="video-card">
-                <a href="${videoLink}" target="_blank" rel="noopener noreferrer">
+                <a href="${videoLink}" target="_blank">
                     <div class="thumbnail-container">
-                        <img src="${video.thumbnail_url}" alt="${video.title}" loading="lazy">
+                        <img src="${imgUrl}" alt="${video.title}" 
+                             onerror="this.src='https://via.placeholder.com/320x180?text=No+Image'">
                     </div>
                     <div class="video-info">
-                        <h3 title="${video.title}">${video.title}</h3>
-                        <p class="channel-name">${video.channel_title || 'ערוץ יוטיוב'}</p>
-                        ${video.category_id ? `<span class="category-tag">${video.category_id}</span>` : ''}
+                        <h3>${video.title}</h3>
+                        <p class="channel-name">${video.channel_title || ''}</p>
                     </div>
                 </a>
             </div>
         `;
     }).join('');
 }
-
 // --- מאזין אירועים (Event Listener) ---
 
 document.getElementById('globalSearch').addEventListener('input', (e) => {
