@@ -80,13 +80,30 @@ function renderGrid(videos) {
     const container = document.getElementById('videoGrid');
     if (!container) return;
     
-    container.innerHTML = videos.map(video => `
-        <div class="video-card">
-            <img src="${video.thumbnail_url}" alt="${video.title}">
-            <h3>${video.title}</h3>
-            <p>${video.channel_title}</p>
-        </div>
-    `).join('');
+    if (videos.length === 0) {
+        container.innerHTML = '<p class="no-results">לא נמצאו סרטונים תואמים...</p>';
+        return;
+    }
+
+    container.innerHTML = videos.map(video => {
+        // יצירת לינק בטוח ליוטיוב
+        const videoLink = `https://www.youtube.com/watch?v=${video.youtube_id}`;
+        
+        return `
+            <div class="video-card">
+                <a href="${videoLink}" target="_blank" rel="noopener noreferrer">
+                    <div class="thumbnail-container">
+                        <img src="${video.thumbnail_url}" alt="${video.title}" loading="lazy">
+                    </div>
+                    <div class="video-info">
+                        <h3 title="${video.title}">${video.title}</h3>
+                        <p class="channel-name">${video.channel_title || 'ערוץ יוטיוב'}</p>
+                        ${video.category_id ? `<span class="category-tag">${video.category_id}</span>` : ''}
+                    </div>
+                </a>
+            </div>
+        `;
+    }).join('');
 }
 
 // --- מאזין אירועים (Event Listener) ---
