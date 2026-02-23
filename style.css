@@ -5,12 +5,13 @@
     --spotify-green: #1DB954;
     --text-white: #ffffff;
     --text-dim: #b3b3b3;
+    --overlay-bg: rgba(0, 0, 0, 0.85);
 }
 
 body {
     margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif;
     background-color: var(--black); color: var(--text-white);
-    display: grid; grid-template-columns: 300px 1fr;
+    display: grid; grid-template-columns: 260px 1fr; /* הקטנתי מעט את הסיידבר */
     grid-template-rows: 1fr 90px; height: 100vh;
 }
 
@@ -20,6 +21,7 @@ body {
 .nav-link { 
     padding: 12px; cursor: pointer; color: var(--text-dim); 
     display: flex; align-items: center; gap: 15px; font-weight: bold; transition: 0.2s;
+    font-size: 13px; /* הקטנת טקסט בסיידבר */
 }
 .nav-link:hover, .nav-link.active { color: white; }
 
@@ -29,23 +31,84 @@ body {
     overflow-y: auto; padding: 20px;
 }
 .search-bar {
-    background: white; border-radius: 50px; padding: 10px 20px;
-    display: flex; align-items: center; width: 350px;
+    background: white; border-radius: 50px; padding: 8px 20px;
+    display: flex; align-items: center; width: 300px;
 }
-.search-bar input { border: none; outline: none; width: 100%; margin-left: 10px; }
+.search-bar input { border: none; outline: none; width: 100%; margin-left: 10px; font-size: 14px; }
 
-/* Video Cards */
+/* Video Cards Grid - יותר קוביות */
 .video-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px; margin-top: 20px;
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); /* גריד צפוף משמעותית */
+    gap: 15px; 
+    margin-top: 20px;
 }
+
 .v-card {
-    background: var(--light-grey); padding: 15px; border-radius: 8px;
-    cursor: pointer; transition: 0.3s;
+    background: var(--light-grey); 
+    padding: 10px; /* צמצום פאדינג */
+    border-radius: 8px;
+    cursor: pointer; 
+    transition: 0.3s;
+    position: relative; /* הכרחי עבור ה-Overlay */
+    display: flex;
+    flex-direction: column;
 }
+
 .v-card:hover { background: #282828; }
-.v-card img { width: 100%; border-radius: 4px; aspect-ratio: 16/9; object-fit: cover; }
-.v-card h3 { font-size: 14px; margin: 10px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* מיכל התמונה והתיאור */
+.card-img-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.v-card img { 
+    width: 100%; 
+    height: 100%;
+    object-fit: cover; 
+}
+
+/* שכבת התיאור בריחוף */
+.video-description-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--overlay-bg);
+    color: #eee;
+    font-size: 11px; /* טקסט קטן לתיאור */
+    padding: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    overflow-y: auto;
+    line-height: 1.4;
+    pointer-events: none; /* מאפשר ללחוץ דרך התיאור כדי לנגן */
+}
+
+.v-card:hover .video-description-overlay {
+    opacity: 1;
+}
+
+/* טקסט הכרטיסייה */
+.v-card h3 { 
+    font-size: 12.5px; /* הקטנת כותרת */
+    margin: 10px 0 5px 0; 
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* הגבלה ל-2 שורות כותרת */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-footer {
+    font-size: 11px; /* הקטנת שם ערוץ */
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
 /* Player Bar */
 .player-bar {
