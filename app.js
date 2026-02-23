@@ -100,41 +100,39 @@ async function executeSearch(finalQuery) {
 
 let currentDisplayedVideos = [];
 
-function renderVideoGrid(data, isAppend = false) {
+function renderVideoGrid(data) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
-
-    if (!isAppend) {
-        currentDisplayedVideos = data || [];
-    } else {
-        // מיזוג תוצאות חדשות ושמירה על ייחודיות לפי ID
-        const existingIds = new Set(currentDisplayedVideos.map(v => v.id));
-        const newUniqueVideos = data.filter(v => !existingIds.has(v.id));
-        currentDisplayedVideos = [...currentDisplayedVideos, ...newUniqueVideos];
-    }
-
-    if (currentDisplayedVideos.length === 0) {
+    
+    if (!data || data.length === 0) {
         grid.innerHTML = '<p style="padding:20px; text-align:center;">לא נמצאו סרטונים...</p>';
         return;
     }
 
-    grid.innerHTML = currentDisplayedVideos.map(v => {
+    grid.innerHTML = data.map(v => {
         const safeTitle = (v.title || "").replace(/'/g, "\\'");
         const safeChannel = (v.channel_title || "").replace(/'/g, "\\'");
+        const safeDesc = v.description || "אין תיאור זמין";
+
         return `
             <div class="v-card" onclick="playVideo('${v.id}', '${safeTitle}', '${safeChannel}')">
                 <div class="card-img-container">
-                    <img src="${v.thumbnail || ''}">
+                    <img src="${v.thumbnail || ''}" loading="lazy">
                     <button class="play-overlay-btn"><i class="fa-solid fa-play"></i></button>
+                    
+                    <div class="video-description-overlay">
+                        ${safeDesc}
+                    </div>
                 </div>
                 <h3>${v.title || ''}</h3>
                 <div class="card-footer">
                     <span>${v.channel_title || ''}</span>
+                    <i class="fa-regular fa-heart" onclick="event.stopPropagation(); toggleFavorite('${v.id}')" id="fav-icon-${v.id}"></i>
                 </div>
-            </div>`;
+            </div>
+        `;
     }).join('');
 }
-
 async function playVideo(id, title, channel) {
     const player = document.getElementById('youtubePlayer');
     if (player) {
