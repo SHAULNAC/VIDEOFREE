@@ -33,19 +33,19 @@ body {
     overflow-y: auto; padding: 20px;
 }
 
-/* Container החיפוש */
 .search-bar {
     background: white; border-radius: 50px; padding: 8px 20px;
     display: flex; align-items: center; width: 300px; margin-bottom: 20px;
 }
 .search-bar input { border: none; outline: none; width: 100%; margin-left: 10px; font-size: 14px; color: #000; }
 
-/* תיקון קריטי: הגדרת הגריד גם כ-ID וגם כ-Class כדי למנוע אי-טעינה */
+/* Video Grid - תיקון: הגדרה גם ל-ID וגם ל-Class */
 #videoGrid, .video-grid {
     display: grid !important; 
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* גריד צפוף יותר */
     gap: 16px; 
     width: 100%;
+    margin-top: 20px;
 }
 
 /* כרטיסיית סרטון */
@@ -57,7 +57,8 @@ body {
     transition: background 0.3s;
     display: flex;
     flex-direction: column;
-    height: 240px; /* גובה קבוע לכרטיסייה למניעת קריסה */
+    position: relative;
+    height: 100%; /* שומר על גובה אחיד בשורה */
 }
 .v-card:hover { background: #282828; }
 
@@ -78,7 +79,7 @@ body {
     display: block;
 }
 
-/* שכבת התיאור בריחוף */
+/* שכבת התיאור בריחוף - Position Absolute שלא הורס את הגריד */
 .video-description-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -89,22 +90,21 @@ body {
     opacity: 0; 
     transition: opacity 0.3s ease;
     overflow-y: auto;
-    pointer-events: none;
+    pointer-events: none; /* מאפשר לחיצה על הסרטון דרך השכבה */
     line-height: 1.4;
     text-align: right;
-    z-index: 2;
 }
 
 .v-card:hover .video-description-overlay {
     opacity: 1;
 }
 
-/* טקסט הכרטיסייה */
+/* טקסט הכרטיסייה - גודל אחיד ומניעת קפיצות */
 .v-card h3 { 
     font-size: 12.5px; 
     margin: 10px 0 6px 0; 
     line-height: 1.3;
-    height: 2.6em; 
+    height: 2.6em; /* גובה קבוע ל-2 שורות כדי שהגריד יישאר ישר */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -113,7 +113,7 @@ body {
 }
 
 .card-footer {
-    margin-top: auto; 
+    margin-top: auto; /* דוחף את הפוטר לתחתית הכרטיסייה */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -121,11 +121,19 @@ body {
     color: var(--text-dim);
 }
 
+.card-footer span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80%;
+}
+
 /* כפתור מועדפים */
 .fav-btn {
     background: none; border: none; color: var(--text-dim);
     cursor: pointer; font-size: 14px; padding: 2px;
 }
+.fav-btn:hover { color: var(--spotify-green); }
 .fa-solid.fa-heart { color: var(--spotify-green); }
 
 /* Player Bar */
@@ -134,3 +142,10 @@ body {
     display: flex; justify-content: space-between; align-items: center; padding: 0 20px;
 }
 .iframe-wrapper { width: 400px; height: 70px; border-radius: 8px; overflow: hidden; }
+#youtubePlayer { width: 100%; height: 100%; border: none; }
+
+/* Floating Player */
+.floating {
+    position: fixed; bottom: 100px; right: 20px;
+    width: 320px !important; height: 180px !important; z-index: 999;
+}
