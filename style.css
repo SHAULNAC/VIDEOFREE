@@ -5,16 +5,13 @@
     --spotify-green: #1DB954;
     --text-white: #ffffff;
     --text-dim: #b3b3b3;
-    --overlay-bg: rgba(0, 0, 0, 0.9);
 }
 
 body {
     margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif;
     background-color: var(--black); color: var(--text-white);
-    display: grid; 
-    grid-template-columns: 260px 1fr;
-    grid-template-rows: 1fr 90px; 
-    height: 100vh;
+    display: grid; grid-template-columns: 260px 1fr;
+    grid-template-rows: 1fr 90px; height: 100vh;
 }
 
 /* Sidebar */
@@ -33,18 +30,18 @@ body {
     overflow-y: auto; padding: 20px;
 }
 
+/* Search Bar */
 .search-bar {
     background: white; border-radius: 50px; padding: 8px 20px;
     display: flex; align-items: center; width: 300px; margin-bottom: 20px;
 }
 .search-bar input { border: none; outline: none; width: 100%; margin-left: 10px; font-size: 14px; color: #000; }
 
-/* Video Grid - תיקון: הגדרה גם ל-ID וגם ל-Class */
+/* Video Grid - כאן התיקון המרכזי ליותר קוביות */
 #videoGrid, .video-grid {
-    display: grid !important; 
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* גריד צפוף יותר */
-    gap: 16px; 
-    width: 100%;
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* הקטנה מ-200 ל-160 כדי להכניס יותר */
+    gap: 15px; 
     margin-top: 20px;
 }
 
@@ -54,66 +51,36 @@ body {
     padding: 12px; 
     border-radius: 8px;
     cursor: pointer; 
-    transition: background 0.3s;
+    transition: 0.3s;
     display: flex;
     flex-direction: column;
-    position: relative;
-    height: 100%; /* שומר על גובה אחיד בשורה */
+    height: 100%; /* גובה אחיד */
 }
 .v-card:hover { background: #282828; }
 
-/* מיכל התמונה והתיאור המרחף */
-.card-img-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16/9;
-    border-radius: 4px;
-    overflow: hidden;
-    background: #000;
-}
-
 .v-card img { 
     width: 100%; 
-    height: 100%;
+    border-radius: 4px; 
+    aspect-ratio: 16/9; 
     object-fit: cover; 
-    display: block;
 }
 
-/* שכבת התיאור בריחוף - Position Absolute שלא הורס את הגריד */
-.video-description-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--overlay-bg);
-    color: #eee;
-    font-size: 11px;
-    padding: 10px;
-    opacity: 0; 
-    transition: opacity 0.3s ease;
-    overflow-y: auto;
-    pointer-events: none; /* מאפשר לחיצה על הסרטון דרך השכבה */
-    line-height: 1.4;
-    text-align: right;
-}
-
-.v-card:hover .video-description-overlay {
-    opacity: 1;
-}
-
-/* טקסט הכרטיסייה - גודל אחיד ומניעת קפיצות */
+/* כותרת קטנה יותר - מראה יותר מידע מיד */
 .v-card h3 { 
-    font-size: 12.5px; 
-    margin: 10px 0 6px 0; 
+    font-size: 12px; /* הקטנה מ-14 ל-12 */
+    margin: 10px 0 5px 0; 
     line-height: 1.3;
-    height: 2.6em; /* גובה קבוע ל-2 שורות כדי שהגריד יישאר ישר */
+    height: 2.6em; /* בדיוק 2 שורות */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    color: var(--text-white);
+    white-space: normal; /* ביטול ה-nowrap כדי שייראו 2 שורות */
 }
 
+/* פוטר הכרטיסייה עם הלב */
 .card-footer {
-    margin-top: auto; /* דוחף את הפוטר לתחתית הכרטיסייה */
+    margin-top: auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -125,15 +92,14 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 80%;
+    max-width: 110px;
 }
 
-/* כפתור מועדפים */
+/* כפתור מועדפים (הלב) */
 .fav-btn {
     background: none; border: none; color: var(--text-dim);
     cursor: pointer; font-size: 14px; padding: 2px;
 }
-.fav-btn:hover { color: var(--spotify-green); }
 .fa-solid.fa-heart { color: var(--spotify-green); }
 
 /* Player Bar */
@@ -143,9 +109,3 @@ body {
 }
 .iframe-wrapper { width: 400px; height: 70px; border-radius: 8px; overflow: hidden; }
 #youtubePlayer { width: 100%; height: 100%; border: none; }
-
-/* Floating Player */
-.floating {
-    position: fixed; bottom: 100px; right: 20px;
-    width: 320px !important; height: 180px !important; z-index: 999;
-}
