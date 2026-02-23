@@ -109,7 +109,7 @@ async function translateText(text) {
 // עדכון ה-EventListener
 document.getElementById('globalSearch').addEventListener('input', (e) => {
     fetchVideos(e.target.value);
-});// --- כאן תדביק את פונקציית renderGrid המקורית שלך בדיוק כפי שהייתה ---
+}
 // פונקציית הרינדור - אחראית על התצוגה בלבד
 function renderVideoGrid(data) {
     const grid = document.getElementById('videoGrid');
