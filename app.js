@@ -3,124 +3,79 @@ const SB_URL = 'https://fbzewdfubjfhqvlusyrj.supabase.co';
 const SB_KEY = 'sb_publishable_2JftgVsArBG2NB-RXp0q4Q_jdd8VfPO';
 const client = supabase.createClient(SB_URL, SB_KEY);
 
-let translationTimer = null;
-let currentLocalData = []; 
+let debounceTimeout = null;
 
-// --- מנוע תרגום חכם: קודם מאגר פנימי, אחר כך גוגל ---
-async function getSmartTranslation(text) {
+// פונקציה חכמה לתרגום - מותאמת לשמות העמודות שלך
+async function getTranslation(text) {
     const cleanText = text.trim().toLowerCase();
     
-    // 1. בדיקה במאגר המתורגם ב-Supabase
-    const { data: cacheEntry } = await client
+    // 1. בדיקה ב-Cache (לפי השמות שציינת: original_text)
+    const { data: cacheEntry, error } = await client
         .from('translation_cache')
         .select('translated_text')
         .eq('original_text', cleanText)
-        .single();
+        .maybeSingle();
 
-    // אם המילה נמצאה במאגר - מחזירים אותה מיד ולא פונים לגוגל
-    if (cacheEntry) {
-        return cacheEntry.translated_text;
-    }
+    if (cacheEntry) return cacheEntry.translated_text;
 
-    // 2. רק אם לא נמצא במאגר - פנייה לתרגום חיצוני
+    // 2. תרגום חיצוני במידה ולא נמצא
     try {
         const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=iw&tl=en&dt=t&q=${encodeURI(cleanText)}`);
         const data = await res.json();
         const translated = data[0][0][0];
 
         if (translated && translated.toLowerCase() !== cleanText) {
-            // שמירה למאגר שלך כדי שבפעם הבאה זה יהיה פנימי ומיידי
-            await client.from('translation_cache').insert([{ original_text: cleanText, translated_text: translated }]);
+            // שמירה ל-Cache (לפי השמות שציינת: original_text, translated_text)
+            await client.from('translation_cache').insert([{ 
+                original_text: cleanText, 
+                translated_text: translated.toLowerCase() 
+            }]);
             return translated;
         }
-    } catch (e) { return null; }
+    } catch (e) { console.error("Translation error:", e); }
     return null;
 }
 
-let debounceTimeout = null;
-
 async function fetchVideos(query = "") {
     const searchQuery = query.trim();
+    
+    // אם החיפוש ריק - הצג הכל מסודר לפי תאריך הוספה
     if (!searchQuery) {
-        // טעינה ראשונית ללא חיפוש
         const { data } = await client.from('videos').select('*').order('added_at', { ascending: false });
         renderVideoGrid(data);
         return;
     }
 
-    // --- שלב א': חיפוש מהיר (מקור + תרגום קיים ב-Cache) ---
-    const { data: cacheData } = await client
-        .from('translation_cache')
-        .select('english_text')
-        .eq('hebrew_text', searchQuery.toLowerCase())
-        .maybeSingle();
+    // שלב א': חיפוש מהיר מיידי על המילה המקורית
+    executeSearch(searchQuery);
 
-    let existingTranslation = cacheData?.english_text;
-    let fastQuery = existingTranslation ? `${searchQuery} | ${existingTranslation}` : searchQuery;
-    
-    // ביצוע חיפוש ראשוני מהיר
-    executeSearch(fastQuery);
-
-    // --- שלב ב': Debounce לתרגום API ושמירה ---
+    // שלב ב': המתנה של 800ms, תרגום וחיפוש משולב
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(async () => {
-        // אם אין לנו תרגום ב-Cache, נתרגם עכשיו
-        if (!existingTranslation) {
-            const newTranslation = await translateText(searchQuery);
-            
-            if (newTranslation && newTranslation.toLowerCase() !== searchQuery.toLowerCase()) {
-                // שמירה ל-Cache
-                await client.from('translation_cache').insert({
-                    hebrew_text: searchQuery.toLowerCase(),
-                    english_text: newTranslation.toLowerCase()
-                });
-                
-                // חיפוש חוזר ומדויק עם התרגום החדש
-                executeSearch(`${searchQuery} | ${newTranslation}`);
-            }
+        const translated = await getTranslation(searchQuery);
+        if (translated) {
+            // חיפוש ב-Database שכולל גם את המקור וגם את התרגום
+            executeSearch(`${searchQuery} | ${translated}`);
         }
-    }, 800); // 800ms מסיום ההקלדה
+    }, 800);
 }
 
-// פונקציה שמבצעת את השאילתה מול ה-RPC ב-SQL
+// פונקציית ביצוע החיפוש מול ה-RPC (הפונקציה ב-SQL)
 async function executeSearch(finalQuery) {
     const { data, error } = await client.rpc('search_videos_prioritized', {
         search_term: finalQuery
     });
-
-    if (!error) {
-        renderVideoGrid(data);
-    } else {
-        console.error("Search error:", error);
-    }
+    if (!error) renderVideoGrid(data);
+    else console.error("Search execution error:", error);
 }
 
-// פונקציית עזר לתרגום גוגל
-async function translateText(text) {
-    try {
-        const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=iw&tl=en&dt=t&q=${encodeURI(text)}`);
-        const json = await res.json();
-        return json[0][0][0];
-    } catch (e) {
-        return null;
-    }
-}
-
-// עדכון ה-EventListener
-document.getElementById('globalSearch').addEventListener('input', (e) => {
-    fetchVideos(e.target.value);
-}
-// פונקציית הרינדור - אחראית על התצוגה בלבד
+// פונקציית הרינדור - בונה את כרטיסי הסרטונים
 function renderVideoGrid(data) {
     const grid = document.getElementById('videoGrid');
-    
-    // אם אין תוצאות, נכתוב הודעה למשתמש
     if (!data || data.length === 0) {
-        grid.innerHTML = '<p style="padding:20px; text-align:center;">לא מצאנו סרטונים שתואמים לחיפוש שלך...</p>';
+        grid.innerHTML = '<p style="padding:20px; text-align:center; color:#b3b3b3;">לא נמצאו תוצאות לחיפוש זה...</p>';
         return;
     }
-
-    // הפיכת הנתונים ל-HTML והזרקתם לדף
     grid.innerHTML = data.map(v => `
         <div class="v-card" onclick="playVideo('${v.id}', '${v.title}', '${v.channel_title}')">
             <div class="card-img-container">
@@ -135,6 +90,9 @@ function renderVideoGrid(data) {
         </div>
     `).join('');
 }
-}
 
+// מאזין לאירוע הקלדה בחיפוש
+document.getElementById('globalSearch').addEventListener('input', (e) => fetchVideos(e.target.value));
+
+// טעינה ראשונית של הדף
 document.addEventListener('DOMContentLoaded', () => fetchVideos(""));
