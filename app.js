@@ -148,23 +148,62 @@ async function toggleFavorite(videoId) {
     const icon = document.getElementById(`fav-icon-${videoId}`);
     try {
         const { data: existing } = await client.from('favorites').select('*').eq('user_id', currentUser.id).eq('video_id', videoId).maybeSingle();
+        
         if (existing) {
+            // הסרה מהמועדפים
             await client.from('favorites').delete().eq('id', existing.id);
-            icon.classList.replace('fa-solid', 'fa-regular');
-            icon.style.color = 'inherit';
+            if (icon) {
+                icon.classList.replace('fa-solid', 'fa-regular');
+                icon.style.color = 'inherit';
+            }
         } else {
+            // הוספה למועדפים
             await client.from('favorites').insert([{ user_id: currentUser.id, video_id: videoId }]);
-            icon.classList.replace('fa-regular', 'fa-solid');
-            icon.style.color = '#1DB954';
+            if (icon) {
+                icon.classList.replace('fa-regular', 'fa-solid');
+                icon.style.color = '#1DB954';
+            }
         }
-    } catch (e) { console.error(e); }
+        
+        // עדכון הסיידבר מיד לאחר השינוי
+        loadSidebarLists();
+        
+    } catch (e) { 
+        console.error("טעות בעדכון מועדפים:", e); 
+    }
 }
+
 async function playVideo(id, title, channel) {
     const player = document.getElementById('youtubePlayer');
     if (player) {
+        // 1. הפעלת הסרטון בנגן
         player.src = `https://www.youtube.com/embed/${id}?autoplay=1`;
-        document.getElementById('current-title').innerText = title;
-        document.getElementById('current-channel').innerText = channel;
+        
+        // 2. עדכון כותרת ושם ערוץ בבר הנגן
+        const titleElem = document.getElementById('current-title');
+        const channelElem = document.getElementById('current-channel');
+        if (titleElem) titleElem.innerText = title;
+        if (channelElem) channelElem.innerText = channel;
+
+        // 3. רישום חכם בהיסטוריה (Upsert)
+        if (currentUser) {
+            try {
+                // upsert דואג שאם הסרטון קיים הוא רק יתעדכן ויקפוץ למעלה
+                await client.from('history').upsert(
+                    { 
+                        user_id: currentUser.id, 
+                        video_id: id,
+                        created_at: new Date().toISOString() // מעדכן את הזמן כדי שיקפוץ לראש הרשימה
+                    }, 
+                    { onConflict: 'user_id, video_id' } // מזהה לפי הזוג הזה אם הסרטון כבר קיים
+                );
+                
+                // רענון הסיידבר
+                loadSidebarLists();
+            } catch (e) {
+                console.error("שגיאה בעדכון היסטוריה:", e);
+            }
+        }
     }
 }
 
