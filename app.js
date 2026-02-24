@@ -43,35 +43,38 @@ function formatDuration(isoDuration) {
 // --- אתחול ---
 
 async function init() {
-    // 1. בדיקת משתמש נוכחי בטעינת הדף
-    const { data: { user } } = await client.auth.getUser();
-    currentUser = user; [cite: 1]
-    
-    // 2. האזנה לשינויים בזמן אמת (כניסה/יציאה של משתמש)
-    client.auth.onAuthStateChange((event, session) => {
-        currentUser = session?.user || null; [cite: 1]
-        updateUserUI(); [cite: 1]
+    try {
+        // 1. בדיקת משתמש נוכחי בטעינת הדף
+        const { data: { user } } = await client.auth.getUser();
+        currentUser = user;
+        
+        // 2. האזנה לשינויים (כניסה/יציאה)
+        client.auth.onAuthStateChange((event, session) => {
+            currentUser = session?.user || null;
+            updateUserUI();
+            if (currentUser) loadSidebarLists();
+        });
+
+        // 3. עדכון הממשק
+        updateUserUI();
+        
+        // 4. טעינת נתונים מותאמים אישית אם יש משתמש
         if (currentUser) {
-            loadSidebarLists(); [cite: 1]
+            const { data: favs } = await client.from('favorites')
+                .select('video_id')
+                .eq('user_id', currentUser.id);
+            userFavorites = favs ? favs.map(f => f.video_id) : [];
+            loadSidebarLists();
         }
-    });
 
-    // 3. עדכון ממשק המשתמש הראשוני
-    updateUserUI(); [cite: 1]
-    
-    // 4. אם המשתמש מחובר, שליפת המועדפים שלו וטעינת רשימות הצד
-    if (user) {
-        const { data: favs } = await client.from('favorites').select('video_id').eq('user_id', user.id); [cite: 1]
-        userFavorites = favs ? favs.map(f => f.video_id) : []; [cite: 1]
-        loadSidebarLists(); [cite: 1]
+        // 5. טעינת סרטונים והפעלת פונקציות עזר
+        fetchVideos();
+        initDraggable();
+        initResizer(); 
+
+    } catch (error) {
+        console.error("שגיאה באתחול האפליקציה:", error);
     }
-
-    // 5. טעינת הסרטונים הכללית למסך
-    fetchVideos(); [cite: 1]
-
-    // 6. הפעלת יכולות אינטראקציה לנגן (גרירה ושינוי גודל)
-    initDraggable(); [cite: 1]
-    initResizer(); // הפונקציה החדשה שהוספנו בשלב הקודם
 }
 
 function updateUserUI() {
