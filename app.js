@@ -43,17 +43,51 @@ function formatDuration(isoDuration) {
 // --- אתחול ---
 
 async function init() {
-    const { data: { user } } = await client.auth.getUser();
-    currentUser = user;
-    updateUserUI();
-    
-    if (user) {
-        const { data: favs } = await client.from('favorites').select('video_id').eq('user_id', user.id);
-        userFavorites = favs ? favs.map(f => f.video_id) : [];
-        loadSidebarLists();
+    try {
+        // 1. בדיקת סטטוס התחברות
+        const { data: { user } } = await client.auth.getUser();
+        currentUser = user;
+        updateUserUI();
+        
+        // 2. הגדרת הסרגל התחתון למצב מוסתר בהפעלה ראשונית
+        const playerBar = document.getElementById('main-player-bar');
+        if (playerBar) {
+            playerBar.classList.add('hidden-player');
+        }
+
+        // 3. טעינת נתוני משתמש אם מחובר
+        if (user) {
+            // טעינת מועדפים
+            const { data: favs, error: favError } = await client.from('favorites')
+                .select('video_id')
+                .eq('user_id', user.id);
+            
+            if (!favError) {
+                userFavorites = favs ? favs.map(f => f.video_id) : [];
+            }
+
+            // טעינת רשימות בסיידבר (היסטוריה/מועדפים)
+            if (typeof loadSidebarLists === 'function') {
+                loadSidebarLists();
+            }
+        }
+
+        // 4. טעינת סרטונים לגריד הראשי
+        await fetchVideos();
+
+        // 5. אתחול פונקציות עזר (גרירה ושינוי גודל)
+        if (typeof initDraggable === 'function') {
+            initDraggable();
+        }
+        
+        // אתחול פונקציית שינוי הגודל (Resizer) אם קיימת
+        if (typeof initResizer === 'function') {
+            initResizer();
+        }
+
+    } catch (err) {
+        console.error("Initialization failed:", err);
     }
-    fetchVideos();
-    initDraggable(); // הפעלת הגרירה
 }
 
 function updateUserUI() {
@@ -407,6 +441,34 @@ function closePlayer() {
     isPlaying = false;
     updatePlayStatus(false);
 }
+function initResizer() {
+    const player = document.getElementById('floating-player');
+    const resizer = document.getElementById('resizer');
+    
+    resizer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResize);
+    });
 
+    function resize(e) {
+        // חישוב רוחב וגובה חדשים על בסיס מיקום העכבר
+        const newWidth = e.clientX - player.offsetLeft;
+        const newHeight = e.clientY - player.offsetTop;
+        
+        // הגדרת גבולות מינימליים כדי שהנגן לא ייעלם
+        if (newWidth > 200) player.style.width = newWidth + 'px';
+        if (newHeight > 150) player.style.height = newHeight + 'px';
+    }
+
+    function stopResize() {
+        window.removeEventListener('mousemove', resize);
+        window.removeEventListener('mouseup', stopResize);
+    }
+}
+
+// קריאה לפונקציה בתוך ה-init
+// חפש את פונקציית ה-init הקיימת והוסף בה:
+// initResizer();
 document.getElementById('globalSearch').addEventListener('input', (e) => fetchVideos(e.target.value));
 init();
