@@ -182,7 +182,7 @@ function renderVideoGrid(data, append = false) {
 
 function preparePlay(encodedData) {
     try {
-        // 1. פיענוח הנתונים
+        // 1. פיענוח נתוני הסרטון
         const data = JSON.parse(decodeURIComponent(atob(encodedData)));
         
         const playerWin = document.getElementById('floating-player');
@@ -191,60 +191,57 @@ function preparePlay(encodedData) {
         
         if (!playerWin || !container) return;
 
-        // 2. הצגת ממשק הנגן
+        // 2. הצגת חלון הנגן והסרגל התחתון
         playerWin.style.display = 'flex'; 
         if (playerBar) {
             playerBar.classList.remove('hidden-player');
             playerBar.classList.add('show-player');
         }
 
-        // 3. הגדרות ה-URL של יוטיוב (כולל אופטימיזציה)
+        // 3. בניית כתובת ה-URL של יוטיוב
         const videoParams = new URLSearchParams({
             autoplay: 1,
             enablejsapi: 1,
             rel: 0,
-            iv_load_policy: 3, 
-            disablekb: 1,
-            showinfo: 0,
-            controls: 1,
-            origin: window.location.origin,
-            widget_referrer: 'https://www.youtube.com'
+            origin: window.location.origin
         });
 
-        // 4. הזרקת ה-Spinner וה-Iframe (ה-Spinner ייעלם כשהוידאו ייטען מעליו)
+        // 4. הזרקת המבנה המלא: Loader + IFrame עם מנגנון השמדה עצמית ל-Loader
         container.innerHTML = `
-            <div class="player-loader">
+            <div id="player-loader" class="player-loader">
                 <i class="fa-solid fa-play"></i>
+                <p style="font-size:12px; margin-top:10px;">טוען סרטון...</p>
             </div>
             <iframe id="yt-iframe" 
-                    src="https://www.youtube-nocookie.com/embed/${data.id}?${videoParams.toString()}" 
-                    frameborder="0" 
-                    allow="autoplay; encrypted-media; picture-in-picture" 
-                    allowfullscreen>
+                src="https://www.youtube-nocookie.com/embed/${data.id}?${videoParams.toString()}" 
+                frameborder="0" 
+                allow="autoplay; encrypted-media; picture-in-picture" 
+                allowfullscreen
+                style="opacity: 0; width: 100%; height: 100%; transition: opacity 0.5s ease; position: absolute; top: 0; left: 0; z-index: 2;"
+                onload="const loader = document.getElementById('player-loader'); if(loader) loader.style.display='none'; this.style.opacity='1';">
             </iframe>`;
         
-        // 5. עדכון פרטי הוידאו ב-UI
-        document.getElementById('current-title').textContent = data.t || "";
-        document.getElementById('current-channel').textContent = data.c || "";
+        // 5. עדכון פרטי הטקסט בסרגל הנגן
+        if (document.getElementById('current-title')) 
+            document.getElementById('current-title').textContent = data.t || "ללא כותרת";
+            
+        if (document.getElementById('current-channel')) 
+            document.getElementById('current-channel').textContent = data.c || "";
         
         const catElem = document.getElementById('current-category');
         if (catElem) catElem.textContent = data.cat || "כללי";
         
         if (document.getElementById('stat-views')) 
-            document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v}`;
+            document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v || 0}`;
         
         if (document.getElementById('stat-likes')) 
-            document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l}`;
+            document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l || 0}`;
         
         const descElem = document.getElementById('bottom-description');
         if (descElem) descElem.textContent = data.desc || "";
 
-        // 6. עדכון מצב נגינה
-        isPlaying = true;
-        updatePlayStatus(true);
-
-        // 7. רישום בהיסטוריה ב-Supabase
-        if (currentUser) {
+        // 6. עדכון להיסטוריה ב-Supabase (אם מחובר)
+        if (typeof currentUser !== 'undefined' && currentUser) {
             client.from('history').upsert([
                 { user_id: currentUser.id, video_id: data.id, created_at: new Date() }
             ]).then(() => {
@@ -253,7 +250,7 @@ function preparePlay(encodedData) {
         }
 
     } catch (e) { 
-        console.error("Error in preparePlay:", e); 
+        console.error("שגיאה בהפעלת הסרטון:", e); 
     }
 }
 
