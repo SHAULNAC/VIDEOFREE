@@ -8,8 +8,15 @@
     --text-dim: #b3b3b3;
     --border-color: #282828;
 }
+/* הגדרת פונט ואיפוס כללי לכל האלמנטים */
+*, body, button, input {
+    font-family: 'Rubik', sans-serif !important;
+    margin: 0;
+    box-sizing: border-box; /* מומלץ להוסיף כדי למנוע חריגות ברוחב */
+}
+
+
 body {
-    font-family: 'Assistant', sans-serif;
     margin: 0; 
     background-color: var(--black); 
     color: var(--text-white);
