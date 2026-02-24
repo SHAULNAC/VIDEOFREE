@@ -4,7 +4,7 @@ const client = supabase.createClient(SB_URL, SB_KEY);
 
 let currentUser = null;
 let userFavorites = [];
-let player; // הגדרה אחת בלבד כאן
+let player = null; 
 let isPlayerReady = false;
 
 async function init() {
@@ -18,7 +18,7 @@ async function init() {
         loadSidebarLists();
     }
     
-    fetchVideos();
+    fetchVideos(); // טעינה ראשונית של הגלריה
 }
 
 function updateUserUI() {
@@ -41,34 +41,42 @@ async function logout() { await client.auth.signOut(); window.location.reload();
 
 async function fetchVideos(query = "") {
     const searchQuery = query.trim();
+    let data;
     if (!searchQuery) {
-        const { data } = await client.from('videos').select('*').order('published_at', { ascending: false });
-        renderVideoGrid(data);
+        const result = await client.from('videos').select('*').order('published_at', { ascending: false });
+        data = result.data;
     } else {
-        const { data } = await client.rpc('search_videos_prioritized', { search_term: searchQuery });
-        renderVideoGrid(data || []);
+        const result = await client.rpc('search_videos_prioritized', { search_term: searchQuery });
+        data = result.data;
     }
+    renderVideoGrid(data || []);
 }
 
 function renderVideoGrid(data) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
-    if (!data || data.length === 0) {
+    
+    if (data.length === 0) {
         grid.innerHTML = "<p style='padding:20px;'>לא נמצאו סרטונים.</p>";
         return;
     }
-    
+
     grid.innerHTML = data.map(v => {
         const isFav = userFavorites.includes(v.id);
+        // טיפול בערכי null למניעת קריסה
+        const safeTitle = (v.title || "ללא כותרת").replace(/'/g, "\\'");
+        const safeChannel = (v.channel_title || "ערוץ לא ידוע").replace(/'/g, "\\'");
+        const safeDesc = (v.description || "").replace(/'/g, "\\'");
+
         return `
-            <div class="v-card" onclick="playVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.channel_title.replace(/'/g, "\\'")}')">
+            <div class="v-card" onclick="playVideo('${v.id}', '${safeTitle}', '${safeChannel}')">
                 <div class="card-img-container">
-                    <img src="${v.thumbnail}" loading="lazy">
-                    <div class="video-description-overlay">${v.description || ''}</div>
+                    <img src="${v.thumbnail || ''}" loading="lazy">
+                    <div class="video-description-overlay">${safeDesc}</div>
                 </div>
-                <h3>${v.title}</h3>
+                <h3>${v.title || 'ללא כותרת'}</h3>
                 <div class="card-footer">
-                    <span>${v.channel_title}</span>
+                    <span>${v.channel_title || ''}</span>
                     <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${v.id}')">
                         <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart" id="fav-icon-${v.id}"></i>
                     </button>
@@ -83,13 +91,21 @@ function onYouTubeIframeAPIReady() {
     player = new YT.Player('youtubePlayer', {
         height: '100%',
         width: '100%',
-        playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0, 'origin': window.location.origin },
+        videoId: '', // מתחיל ריק
+        playerVars: { 
+            'autoplay': 1, 
+            'controls': 1, 
+            'rel': 0,
+            'origin': window.location.origin,
+            'enablejsapi': 1 
+        },
         events: {
             'onReady': () => { isPlayerReady = true; },
+            'onError': (e) => console.log("YT Player Error:", e),
             'onStateChange': (event) => {
                 const icon = document.getElementById('play-icon');
-                if (event.data === YT.PlayerState.PLAYING) icon.classList.replace('fa-play', 'fa-pause');
-                else icon.classList.replace('fa-pause', 'fa-play');
+                if (event.data === YT.PlayerState.PLAYING) icon?.classList.replace('fa-play', 'fa-pause');
+                else icon?.classList.replace('fa-pause', 'fa-play');
             }
         }
     });
@@ -99,35 +115,33 @@ async function playVideo(id, title, channel) {
     const floatingPlayer = document.getElementById('floating-player');
     floatingPlayer.style.display = 'block';
     
-    if (isPlayerReady && player && player.loadVideoById) {
+    // ניסיון טעינה דרך ה-API, ואם לא מצליח - טעינה ישירה ל-SRC
+    if (isPlayerReady && player && typeof player.loadVideoById === 'function') {
         player.loadVideoById(id);
+    } else {
+        const iframe = document.querySelector('#youtubePlayer iframe') || document.getElementById('youtubePlayer');
+        if (iframe) {
+            iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&origin=${window.location.origin}`;
+        }
     }
 
     document.getElementById('current-title').innerText = title;
     document.getElementById('current-channel').innerText = channel;
 
-    // הוספה להיסטוריה במידה ומחובר
     if (currentUser) {
         await client.from('history').upsert({ user_id: currentUser.id, video_id: id, created_at: new Date() });
         loadSidebarLists();
     }
 }
 
-function togglePlayPause() {
-    if (!isPlayerReady || !player) return;
-    const state = player.getPlayerState();
-    if (state === YT.PlayerState.PLAYING) player.pauseVideo();
-    else player.playVideo();
-}
-
-// לוגיקת גרירה ושינוי גודל משופרת
+// לוגיקת גרירה
 const floatingWin = document.getElementById('floating-player');
 const handle = document.getElementById('drag-handle');
-const resizeBtn = document.getElementById('resizer');
 
 handle.onmousedown = function(e) {
-    let shiftX = e.clientX - floatingWin.getBoundingClientRect().left;
-    let shiftY = e.clientY - floatingWin.getBoundingClientRect().top;
+    let rect = floatingWin.getBoundingClientRect();
+    let shiftX = e.clientX - rect.left;
+    let shiftY = e.clientY - rect.top;
     
     function moveAt(pageX, pageY) {
         floatingWin.style.left = pageX - shiftX + 'px';
@@ -140,24 +154,9 @@ handle.onmousedown = function(e) {
     document.onmouseup = () => document.removeEventListener('mousemove', onMouseMove);
 };
 
-resizeBtn.onmousedown = function(e) {
-    e.preventDefault();
-    const startWidth = floatingWin.offsetWidth;
-    const startX = e.clientX;
-    
-    function onMouseMove(e) {
-        const newWidth = startWidth + (e.clientX - startX);
-        if (newWidth > 200) {
-            floatingWin.style.width = newWidth + 'px';
-            floatingWin.style.height = (newWidth * 0.56) + 30 + 'px';
-        }
-    }
-    document.addEventListener('mousemove', onMouseMove);
-    document.onmouseup = () => document.removeEventListener('mousemove', onMouseMove);
-};
-
+// יתר הפונקציות (Favorite, Sidebar) נשארות כפי שהיו
 async function toggleFavorite(videoId) {
-    if (!currentUser) return alert("עליך להתחבר כדי להוסיף למועדפים");
+    if (!currentUser) return alert("עליך להתחבר");
     const isCurrentlyFav = userFavorites.includes(videoId);
     if (isCurrentlyFav) {
         await client.from('favorites').delete().eq('user_id', currentUser.id).eq('video_id', videoId);
@@ -166,8 +165,10 @@ async function toggleFavorite(videoId) {
         await client.from('favorites').insert([{ user_id: currentUser.id, video_id: videoId }]);
         userFavorites.push(videoId);
     }
-    fetchVideos(document.getElementById('globalSearch').value);
     loadSidebarLists();
+    // עדכון האייקון בלבד במקום רענון כל הגריד
+    const icon = document.getElementById(`fav-icon-${videoId}`);
+    if(icon) icon.className = userFavorites.includes(videoId) ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
 }
 
 async function loadSidebarLists() {
