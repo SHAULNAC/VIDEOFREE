@@ -342,21 +342,67 @@ async function submitEfficiency(videoId, score, btn) {
         setTimeout(() => document.querySelectorAll('.feedback-toast').forEach(t => t.remove()), 2000);
     }
 }
+// --- עדכון פונקציית טעינת הרשימות בסיידבר ---
 async function loadSidebarLists() {
     if (!currentUser) return;
-    const { data: hist } = await client.from('history').select('video_id, videos(id, title, channel_title)').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(10);
-    if (hist) {
-        const sidebarList = document.getElementById('favorites-list');
-        sidebarList.innerHTML = hist.map(h => {
-            if (!h.videos) return '';
-            const videoData = JSON.stringify({id: h.videos.id, title: cleanForJS(h.videos.title), channel: cleanForJS(h.videos.channel_title)}).replace(/"/g, '&quot;');
-            return `
-                <div class="nav-link" onclick='preparePlay(${videoData})'>
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(h.videos.title)}</span>
-                </div>`;
-        }).join('');
+    
+    // שליפת היסטוריה
+    const { data: hist } = await client.from('history')
+        .select('videos(*)')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+    const sidebarList = document.getElementById('favorites-list');
+    if (sidebarList && hist) {
+        // יצירת כפתור "היסטוריה" שבלחיצה עליו הגריד המרכזי יתמלא
+        sidebarList.innerHTML = `
+            <div class="nav-link" onclick='displayHistory()'>
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>היסטוריית צפייה</span>
+            </div>
+            <div class="nav-link" onclick='displayFavorites()'>
+                <i class="fa-solid fa-heart"></i>
+                <span>סרטונים שאהבתי</span>
+            </div>
+        `;
     }
+}
+
+// פונקציות להצגת הנתונים בגריד הראשי
+async function displayHistory() {
+    const { data } = await client.from('history')
+        .select('videos(*)')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+    
+    if (data) {
+        const videos = data.map(h => h.videos).filter(v => v !== null);
+        document.getElementById('main-title').textContent = "היסטוריית צפייה";
+        renderVideoGrid(videos);
+    }
+}
+
+async function displayFavorites() {
+    const { data } = await client.from('favorites')
+        .select('videos(*)')
+        .eq('user_id', currentUser.id);
+    
+    if (data) {
+        const videos = data.map(f => f.videos).filter(v => v !== null);
+        document.getElementById('main-title').textContent = "מועדפים";
+        renderVideoGrid(videos);
+    }
+}
+
+// --- הוספת פונקציית סגירה לנגן ---
+function closePlayer() {
+    const playerWin = document.getElementById('floating-player');
+    const container = document.getElementById('youtubePlayer');
+    if (playerWin) playerWin.style.display = 'none';
+    if (container) container.innerHTML = ''; 
+    isPlaying = false;
+    updatePlayStatus(false);
 }
 
 document.getElementById('globalSearch').addEventListener('input', (e) => fetchVideos(e.target.value));
