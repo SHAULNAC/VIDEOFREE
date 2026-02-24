@@ -11,27 +11,25 @@
 <body>
 
     <aside class="sidebar">
-    <div class="nav-card">
-        <div id="user-profile" class="user-item">
-            <button class="btn-login" onclick="login()">התחבר עם Google</button>
+        <div class="nav-card">
+            <div id="user-profile" class="user-item">
+                <button class="btn-login" onclick="login()">התחבר עם Google</button>
+            </div>
+            <div class="nav-link active" onclick="location.reload()"><i class="fa-solid fa-house"></i> בית</div>
+            <div class="nav-link"><i class="fa-solid fa-magnifying-glass"></i> חיפוש</div>
+            <div id="searchSpinner" style="display: none;" class="spinner">מחפש...</div>
         </div>
-        <div class="nav-link active" onclick="showSection('home')"><i class="fa-solid fa-house"></i> בית</div>
-        <div class="nav-link" onclick="showSection('search')"><i class="fa-solid fa-magnifying-glass"></i> חיפוש</div>
-        <div id="searchSpinner" style="display: none;" class="spinner">מחפש באנגלית...</div>
-    </div>
 
-    <div class="nav-card library">
-        <div class="library-header"><i class="fa-solid fa-heart" style="color: #1DB954;"></i> המועדפים שלך</div>
-        <div id="favorites-list" class="sidebar-list">
-            </div>
-    </div>
+        <div class="nav-card library">
+            <div class="library-header"><i class="fa-solid fa-heart" style="color: #1DB954;"></i> המועדפים שלך</div>
+            <div id="favorites-list" class="sidebar-list"></div>
+        </div>
 
-    <div class="nav-card library">
-        <div class="library-header"><i class="fa-solid fa-clock-rotate-left"></i> היסטוריית צפייה</div>
-        <div id="history-list" class="sidebar-list">
-            </div>
-    </div>
-</aside>
+        <div class="nav-card library">
+            <div class="library-header"><i class="fa-solid fa-clock-rotate-left"></i> היסטוריית צפייה</div>
+            <div id="history-list" class="sidebar-list"></div>
+        </div>
+    </aside>
 
     <main class="content">
         <header class="top-nav">
@@ -43,43 +41,42 @@
 
         <section id="gallery-container">
             <h2 id="main-title">הסרטונים שלך</h2>
-            <div class="video-grid" id="videoGrid">
-                </div>
+            <div class="video-grid" id="videoGrid"></div>
         </section>
     </main>
 
-  <div id="floating-player" class="floating-window">
-    <div class="window-header" id="drag-handle">
-        <span class="drag-dots">⋮⋮⋮</span>
+    <div id="floating-player" class="floating-window">
+        <div class="window-header" id="drag-handle">
+            <span class="drag-dots">⋮⋮⋮</span>
+        </div>
+        <div id="youtubePlayer"></div>
+        <div class="resizer" id="resizer"></div>
     </div>
-    <div id="youtubePlayer"></div> <div class="resizer" id="resizer"></div>
-</div>
 
-<footer class="player-bar">
-    <div class="now-playing">
-        <div id="track-info">
-            <p id="current-title" style="font-weight: bold; margin: 0;">בחר סרטון...</p>
-            <div class="video-meta-sub">
-                <span id="current-channel"></span>
-                <span id="current-date" style="margin-right: 10px; opacity: 0.6;"></span>
+    <footer class="player-bar">
+        <div class="now-playing">
+            <div id="track-info">
+                <p id="current-title" style="font-weight: bold; margin: 0; font-size: 14px;">בחר סרטון...</p>
+                <div class="video-meta-sub">
+                    <span id="current-channel"></span>
+                    <span id="current-date" style="margin-right: 10px; opacity: 0.6;"></span>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="player-center">
-        <button class="main-play-btn" onclick="togglePlayPause()">
-            <i class="fa-solid fa-play" id="play-icon"></i>
-        </button>
-        <div id="bottom-description" class="bottom-desc"></div>
-    </div>
+        <div class="player-center">
+            <button class="main-play-btn" onclick="togglePlayPause()">
+                <i class="fa-solid fa-play" id="play-icon"></i>
+            </button>
+            <div id="bottom-description" class="bottom-desc"></div>
+        </div>
 
-    <div class="player-right">
-        <span id="video-duration">00:00</span>
-    </div>
-</footer>
+        <div class="player-right">
+            <span id="video-duration">00:00</span>
+        </div>
+    </footer>
 
-<script src="https://www.youtube.com/iframe_api"></script>
-
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="app.js"></script>
 </body>
 </html>
