@@ -150,30 +150,37 @@ function playVideo(id, title, channel) {
 
     playerWin.style.display = 'flex'; 
     
-    // בניית URL עם פרמטרים שחוסכים טעינת רכיבים שנטפרי מסננת
+    /* הסבר על הפרמטרים למהירות בנטפרי:
+       1. youtube-nocookie.com: מונע מראש טעינה של הרבה סקריפטים של מעקב ופרסומות.
+       2. iv_load_policy=3: מבטל את ה-Annotations (הסיבה העיקרית לעיכוב בסינון).
+       3. disablekb=1: מונע טעינת סקריפט לשליטה במקלדת (חוסך עוד בקשת רשת).
+       4. widget_referrer: עוזר ליוטיוב לדלג על בדיקות CORS מסוימות.
+    */
     const params = new URLSearchParams({
         autoplay: 1,
         enablejsapi: 1,
         rel: 0,
-        iv_load_policy: 3,   // קריטי: מבטל הערות/כתוביות שנטפרי סורקת ומתעכבת עליהן
+        iv_load_policy: 3, 
+        disablekb: 1,
         showinfo: 0,
         controls: 1,
-        origin: window.location.origin // עוזר במניעת חלק משגיאות ה-CORS
+        origin: window.location.origin,
+        widget_referrer: 'https://www.youtube.com'
     });
 
+    // שימוש בדומיין המופחת-עוגיות של יוטיוב מזרז משמעותית את הטעינה בנטפרי
     container.innerHTML = `
         <iframe id="yt-iframe" 
-                src="https://www.youtube.com/embed/${id}?${params.toString()}" 
+                src="https://www.youtube-nocookie.com/embed/${id}?${params.toString()}" 
                 frameborder="0" 
                 allow="autoplay; encrypted-media; picture-in-picture" 
                 allowfullscreen>
         </iframe>`;
     
-    // עדכון ממשק המשתמש
     document.getElementById('current-title').innerText = title;
     document.getElementById('current-channel').innerText = channel;
     
-    // עדכון היסטוריה ב-Supabase (אם המשתמש מחובר)
+    // שמירת היסטוריה
     if (currentUser) {
         client.from('history').upsert([
             { user_id: currentUser.id, video_id: id, created_at: new Date() }
