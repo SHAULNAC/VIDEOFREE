@@ -170,14 +170,41 @@ async function playVideo(id, title, channel) {
 
 async function loadSidebarLists() {
     if (!currentUser) return;
-    const { data: history } = await client.from('history').select('videos(id, title)').eq('user_id', currentUser.id).limit(5);
-    const sidebarList = document.getElementById('favorites-list');
-    if (history && sidebarList) {
-        sidebarList.innerHTML = history.map(h => h.videos ? `
-            <div class="nav-link" onclick="playVideo('${h.videos.id}', '${h.videos.title.replace(/'/g, "\\'")}', '')">
-                <i class="fa-solid fa-clock-rotate-left"></i> ${h.videos.title}
-            </div>` : '').join('');
-    }
+
+    // --- טעינת מועדפים ---
+    try {
+        const { data: favorites } = await client
+            .from('favorites')
+            .select('video_id, videos(id, title)')
+            .eq('user_id', currentUser.id)
+            .limit(10);
+
+        const favListDiv = document.getElementById('favorites-list');
+        if (favorites && favListDiv) {
+            favListDiv.innerHTML = favorites.map(f => f.videos ? `
+                <div class="nav-link sidebar-item" onclick="playVideo('${f.videos.id}', '${f.videos.title.replace(/'/g, "\\'")}', '')">
+                    <i class="fa-solid fa-play-circle" style="font-size: 10px;"></i> ${f.videos.title}
+                </div>` : '').join('');
+        }
+    } catch (e) { console.error("Error loading favorites:", e); }
+
+    // --- טעינת היסטוריה ---
+    try {
+        const { data: history } = await client
+            .from('history')
+            .select('video_id, videos(id, title)')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const historyListDiv = document.getElementById('history-list');
+        if (history && historyListDiv) {
+            historyListDiv.innerHTML = history.map(h => h.videos ? `
+                <div class="nav-link sidebar-item" onclick="playVideo('${h.videos.id}', '${h.videos.title.replace(/'/g, "\\'")}', '')">
+                    <i class="fa-solid fa-history" style="font-size: 10px;"></i> ${h.videos.title}
+                </div>` : '').join('');
+        }
+    } catch (e) { console.error("Error loading history:", e); }
 }
 
 document.getElementById('globalSearch').addEventListener('input', (e) => fetchVideos(e.target.value));
