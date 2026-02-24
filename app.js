@@ -42,7 +42,23 @@ function formatDuration(isoDuration) {
     return parts.join(':');
 }
 
-// --- אתחול ---
+function showPrivacy() {
+    const modal = document.getElementById('privacy-modal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closePrivacy() {
+    const modal = document.getElementById('privacy-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+// סגירה בלחיצה מחוץ למודאל
+window.onclick = function(event) {
+    const modal = document.getElementById('privacy-modal');
+    if (event.target == modal) {
+        closePrivacy();
+    }
+}// --- אתחול ---
 
 async function init() {
     try {
