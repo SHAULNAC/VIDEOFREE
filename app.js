@@ -7,14 +7,12 @@ let userFavorites = [];
 let debounceTimeout = null;
 let isPlaying = false;
 
-// --- פונקציות עזר ותיקון תווים ---
-
-// ניקוי שאילתה לפני שליחה ל-FTS למניעת קריסה
+// 1. פונקציית עזר לניקוי תווים מיוחדים (FTS)
 function cleanFtsQuery(query) {
     return query.replace(/[^\w\sא-ת]/g, ' ').trim();
 }
 
-// הגנה על טקסט שמוזרק לתוך HTML ו-JS (מונע SyntaxError בגלל גרשים)
+// 2. פונקציית הגנה על טקסט ב-HTML
 function escapeHtml(text) {
     if (!text) return "";
     return text
@@ -22,10 +20,14 @@ function escapeHtml(text) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;"); // מחליף גרש לקוד HTML בטוח
+        .replace(/'/g, "&#39;");
 }
 
-// --- ניהול משתמש ואתחול ---
+// 3. פונקציית הגנה על טקסט בתוך פקודות JavaScript (כמו onclick)
+function escapeJS(text) {
+    if (!text) return "";
+    return text.replace(/'/g, "\\\\'"); // סלאש כפול לגרש בודד
+}
 
 async function init() {
     const { data: { user } } = await client.auth.getUser();
@@ -43,7 +45,7 @@ async function init() {
 function updateUserUI() {
     const userDiv = document.getElementById('user-profile');
     if (currentUser && userDiv && currentUser.user_metadata) {
-        const avatar = currentUser.user_metadata.avatar_url || ""; // תיקון שגיאת 404 null
+        const avatar = currentUser.user_metadata.avatar_url || "";
         userDiv.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
                 ${avatar ? `<img src="${avatar}" style="width:35px; border-radius:50%; border: 2px solid #1DB954;">` : ''}
@@ -58,8 +60,7 @@ function updateUserUI() {
 
 async function logout() { await client.auth.signOut(); window.location.reload(); }
 
-// --- מערכת חיפוש ותרגום ---
-
+// 4. חיפוש FTS בלבד (ללא ILIKE)
 async function fetchVideos(query = "") {
     const rawQuery = query.trim();
     if (!rawQuery) {
@@ -69,9 +70,10 @@ async function fetchVideos(query = "") {
     }
 
     const cleanQuery = cleanFtsQuery(rawQuery);
-    // שימוש ב-FTS בלבד כפי שביקשת
-    const { data } = await client.rpc('search_videos_prioritized', { search_term: cleanQuery });
-    renderVideoGrid(data || []);
+    
+    // שליחה ל-RPC של חיפוש FTS
+    const { data, error } = await client.rpc('search_videos_prioritized', { search_term: cleanQuery });
+    if (!error) renderVideoGrid(data || []);
 
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(async () => {
@@ -91,24 +93,20 @@ async function getTranslation(text) {
     } catch (e) { return null; }
 }
 
-// --- רינדור תצוגה ---
-
+// 5. רינדור גריד עם טיפול בגרשים
 function renderVideoGrid(data, append = false) {
     const grid = document.getElementById('videoGrid');
     if (!grid || !data) return;
     
     const html = data.map(v => {
         const isFav = userFavorites.includes(v.id);
-        
-        // הכנת הטקסט להצגה ב-HTML
         const displayTitle = escapeHtml(v.title);
         const displayChannel = escapeHtml(v.channel_title);
         const displayDesc = escapeHtml(v.description);
 
-        // הכנת הטקסט למשלוח בתוך פונקציית onclick
-        // אנחנו מחליפים כל גרש בגרש עם שני סלאשים לפניו כדי שה-JS יבין שזה תו טקסטואלי
-        const jsTitle = v.title.replace(/'/g, "\\\\'");
-        const jsChannel = v.channel_title.replace(/'/g, "\\\\'");
+        // כאן התיקון הקריטי לסרטונים כמו "מ"ג" או "שליט"א"
+        const jsTitle = escapeJS(v.title);
+        const jsChannel = escapeJS(v.channel_title);
 
         return `
             <div class="v-card" onclick="playVideo('${v.id}', '${jsTitle}', '${jsChannel}')">
@@ -129,14 +127,12 @@ function renderVideoGrid(data, append = false) {
     grid.innerHTML = append ? grid.innerHTML + html : html;
 }
 
-// --- נגן וידאו (טעינה ישירה ומהירה) ---
-
+// 6. הפעלת סרטון (טעינה ישירה ב-Iframe)
 function playVideo(id, title, channel) {
     const playerWin = document.getElementById('floating-player');
     const container = document.getElementById('youtubePlayer');
     
     playerWin.style.display = 'flex'; 
-    // טעינה ישירה ללא בדיקות API מיותרות לשיפור המהירות
     container.innerHTML = `
         <iframe src="https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1" 
                 frameborder="0" allow="autoplay; encrypted-media" allowfullscreen 
@@ -167,13 +163,13 @@ function updatePlayStatus(playing) {
     if (icon) icon.className = playing ? 'fa-solid fa-pause' : 'fa-solid fa-play';
 }
 
-// --- לוגיקת גרירת חלון ---
-
+// 7. לוגיקת גרירה
 const floatingPlayer = document.getElementById('floating-player');
 const dragHandle = document.getElementById('drag-handle');
 
 if (dragHandle) {
     dragHandle.onmousedown = function(e) {
+        if (e.target.tagName === 'BUTTON') return;
         e.preventDefault();
         const rect = floatingPlayer.getBoundingClientRect();
         let shiftX = e.clientX - rect.left;
@@ -192,10 +188,7 @@ if (dragHandle) {
             document.onmouseup = null;
         };
     };
-    dragHandle.ondragstart = function() { return false; };
 }
-
-// --- מועדפים והיסטוריה ---
 
 async function toggleFavorite(videoId) {
     if (!currentUser) return alert("התחבר קודם");
@@ -216,7 +209,7 @@ async function loadSidebarLists() {
     const { data: hist } = await client.from('history').select('video_id, videos(id, title)').eq('user_id', currentUser.id).limit(10).order('created_at', {ascending: false});
     if (hist) {
         document.getElementById('favorites-list').innerHTML = hist.map(h => h.videos ? `
-            <div class="nav-link" onclick="playVideo('${h.videos.id}', '${escapeHtml(h.videos.title).replace(/'/g, "\\'")}', '')">
+            <div class="nav-link" onclick="playVideo('${h.videos.id}', '${escapeJS(h.videos.title)}', '')">
                 <i class="fa-solid fa-clock-rotate-left"></i> ${h.videos.title}
             </div>` : '').join('');
     }
