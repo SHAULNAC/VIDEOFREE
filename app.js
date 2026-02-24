@@ -167,7 +167,7 @@ function renderVideoGrid(data, append = false) {
             <div class="v-card" onclick="preparePlay('${safeData}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail}" loading="lazy">
-                    <span class="duration-badge">${v.duration || ''}</span>
+                    <span class="duration-badge">${formatDuration(v.duration)}</span>
                 </div>
                 <h3>${escapeHtml(v.title)}</h3>
                 <div class="card-footer">
@@ -244,11 +244,7 @@ function playVideo(data) {
         descElem.textContent = data.desc;
     }
 
-    setTimeout(() => {
-        if (isPlaying && document.getElementById('yt-iframe')) {
-            showEfficiencyPoll(data.id);
-        }
-    }, 30000);
+   
 
     if (currentUser) {
         client.from('history').upsert([
