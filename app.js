@@ -198,7 +198,7 @@ function playVideo(data) {
     }
     isPlaying = true;
     updatePlayStatus(true);
-}
+
 
 
     isPlaying = true;
