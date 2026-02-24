@@ -7,7 +7,7 @@ let userFavorites = [];
 let debounceTimeout = null;
 let isPlaying = false;
 
-// מיפוי קטגוריות יוטיוב
+// מיפוי קטגוריות יוטיוב לעברית
 const categoryMap = {
     "1": "סרטים ואנימציה",
     "2": "רכבים",
@@ -24,17 +24,20 @@ const categoryMap = {
     "28": "מדע וטכנולוגיה"
 };
 
-// פונקציית ניקוי חזקה - מטפלת בגרשים, ירידות שורה ותווים שוברים
+// --- פונקציות עזר וניקוי ---
+
+// ניקוי חזק למניעת שגיאות Syntax ב-JS (מטפל בגרשים ושורות חדשות)
 function cleanForJS(text) {
     if (!text) return "";
     return text
-        .replace(/\\/g, '\\\\') // סלאש נטוי
-        .replace(/'/g, "\\'")   // גרש בודד
-        .replace(/"/g, '\\"')   // גרשיים
-        .replace(/\n/g, ' ')    // החלפת ירידת שורה ברווח (מונע SyntaxError)
+        .replace(/\\/g, '\\\\') 
+        .replace(/'/g, "\\'")   
+        .replace(/"/g, '\\"')   
+        .replace(/\n/g, ' ')    
         .replace(/\r/g, ' ');
 }
 
+// הגנה על הזרקת HTML
 function escapeHtml(text) {
     if (!text) return "";
     return text
@@ -45,10 +48,13 @@ function escapeHtml(text) {
         .replace(/'/g, "&#39;");
 }
 
+// --- אתחול וניהול משתמש ---
+
 async function init() {
     const { data: { user } } = await client.auth.getUser();
     currentUser = user;
     updateUserUI();
+    
     if (user) {
         const { data: favs } = await client.from('favorites').select('video_id').eq('user_id', user.id);
         userFavorites = favs ? favs.map(f => f.video_id) : [];
@@ -74,7 +80,8 @@ function updateUserUI() {
 
 async function logout() { await client.auth.signOut(); window.location.reload(); }
 
-// חיפוש FTS ותרגום
+// --- מערכת חיפוש ותרגום ---
+
 async function fetchVideos(query = "") {
     const rawQuery = query.trim();
     if (!rawQuery) {
@@ -82,10 +89,15 @@ async function fetchVideos(query = "") {
         renderVideoGrid(data);
         return;
     }
+
+    // ניקוי תווים מיוחדים לחיפוש FTS
     const cleanQuery = rawQuery.replace(/[^\w\sא-ת]/g, ' ').trim();
+    
+    // שלב 1: חיפוש בעברית/מקור
     const { data } = await client.rpc('search_videos_prioritized', { search_term: cleanQuery });
     renderVideoGrid(data || []);
 
+    // שלב 2: תרגום וחיפוש באנגלית לאחר השהיה
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(async () => {
         const translated = await getTranslation(cleanQuery);
@@ -104,6 +116,8 @@ async function getTranslation(text) {
     } catch (e) { return null; }
 }
 
+// --- רינדור ממשק ---
+
 function renderVideoGrid(data, append = false) {
     const grid = document.getElementById('videoGrid');
     if (!grid || !data) return;
@@ -112,22 +126,25 @@ function renderVideoGrid(data, append = false) {
         const isFav = userFavorites.includes(v.id);
         const categoryName = categoryMap[v.category_id] || "כללי";
         
-        // ניקוי כפול למניעת שגיאות Syntax
+        // הכנה בטוחה ל-JS
         const safeTitle = cleanForJS(v.title);
         const safeChannel = cleanForJS(v.channel_title);
-        const safeDesc = escapeHtml(v.description);
+        // הכנה בטוחה ל-HTML
+        const displayTitle = escapeHtml(v.title);
+        const displayChannel = escapeHtml(v.channel_title);
+        const displayDesc = escapeHtml(v.description);
 
         return `
             <div class="v-card" onclick="playVideo('${v.id}', '${safeTitle}', '${safeChannel}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail}" loading="lazy">
-                    <div class="video-description-overlay">${safeDesc}</div>
+                    <div class="video-description-overlay">${displayDesc}</div>
                 </div>
-                <h3>${escapeHtml(v.title)}</h3>
+                <h3>${displayTitle}</h3>
                 <div class="card-footer">
-                    <span>${escapeHtml(v.channel_title)} | ${categoryName}</span>
+                    <span>${displayChannel} | ${categoryName}</span>
                     <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${v.id}')">
-                        <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart" id="fav-icon-${v.id}"></i>
+                        <i class="${isFav ? 'fa-solid' : 'fa-heart'} ${isFav ? '' : 'fa-regular'}" id="fav-icon-${v.id}"></i>
                     </button>
                 </div>
             </div>`;
@@ -135,35 +152,20 @@ function renderVideoGrid(data, append = false) {
     grid.innerHTML = append ? grid.innerHTML + html : html;
 }
 
-function playVideo(id, title, channel) {
-    const playerWin = document.getElementById('floating-player');
-    const container = document.getElementById('youtubePlayer');
-    playerWin.style.display = 'flex'; 
-    container.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="width: 100%; height: 100%; display: block;"></iframe>`;
-    document.getElementById('current-title').innerText = title;
-    document.getElementById('current-channel').innerText = channel;
-    isPlaying = true;
-    updatePlayStatus(true);
-    if (currentUser) client.from('history').upsert({ user_id: currentUser.id, video_id: id, created_at: new Date() });
-}
+// --- נגן ופקדים ---
 
-// ... שאר הפונקציות (togglePlayPause, drag logic, favorites) נשארות כפי שהן ...
-// --- נגן ופקדי שליחה (עקיפת חסימות ושיפור מהירות) ---
 function playVideo(id, title, channel) {
     const playerWin = document.getElementById('floating-player');
     const container = document.getElementById('youtubePlayer');
     
-    // הצגת החלון כ-Flex כדי להתאים ל-CSS המתוקן
     playerWin.style.display = 'flex'; 
-    
-    // טעינת ה-iframe באופן ישיר לביצועים מקסימליים
     container.innerHTML = `
         <iframe id="yt-iframe" 
                 src="https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&rel=0" 
                 frameborder="0" 
                 allow="autoplay; encrypted-media" 
                 allowfullscreen
-                style="width: 100%; height: 100%; border: none;">
+                style="width: 100%; height: 100%; border: none; display: block;">
         </iframe>`;
     
     document.getElementById('current-title').innerText = title;
@@ -171,13 +173,8 @@ function playVideo(id, title, channel) {
     isPlaying = true;
     updatePlayStatus(true);
 
-    // עדכון היסטוריה ב-Supabase אם המשתמש מחובר
     if (currentUser) {
-        client.from('history').upsert({ 
-            user_id: currentUser.id, 
-            video_id: id, 
-            created_at: new Date() 
-        });
+        client.from('history').upsert({ user_id: currentUser.id, video_id: id, created_at: new Date() });
     }
 }
 
@@ -201,7 +198,8 @@ function updatePlayStatus(playing) {
     if (icon) icon.className = playing ? 'fa-solid fa-pause' : 'fa-solid fa-play';
 }
 
-// --- לוגיקת גרירה חסינה (לא נתקעת ב-Iframe) ---
+// --- לוגיקת גרירה חסינה ---
+
 const floatingPlayer = document.getElementById('floating-player');
 const dragHandle = document.getElementById('drag-handle');
 
@@ -214,7 +212,7 @@ if (dragHandle) {
         let shiftX = e.clientX - rect.left;
         let shiftY = e.clientY - rect.top;
 
-        // יצירת שכבת הגנה זמנית מעל ה-iframe כדי שהסמן לא יאבד במהלך גרירה מהירה
+        // שכבת מגן כדי שהעכבר לא יברח לתוך ה-iframe
         const overlay = document.createElement('div');
         overlay.style.position = 'absolute';
         overlay.style.top = '30px';
@@ -235,7 +233,6 @@ if (dragHandle) {
         }
 
         document.addEventListener('mousemove', onMouseMove);
-
         document.onmouseup = function() {
             document.removeEventListener('mousemove', onMouseMove);
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -245,7 +242,8 @@ if (dragHandle) {
     dragHandle.ondragstart = function() { return false; };
 }
 
-// --- ניהול מועדפים והיסטוריה ---
+// --- מועדפים והיסטוריה ---
+
 async function toggleFavorite(videoId) {
     if (!currentUser) return alert("עליך להתחבר כדי להוסיף למועדפים");
     const isFav = userFavorites.includes(videoId);
@@ -281,14 +279,11 @@ async function loadSidebarLists() {
             return `
                 <div class="nav-link" onclick="playVideo('${h.videos.id}', '${safeTitle}', '${safeChannel}')">
                     <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span class="truncate">${h.videos.title}</span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(h.videos.title)}</span>
                 </div>`;
         }).join('');
     }
 }
 
-// האזנה לחיפוש
 document.getElementById('globalSearch').addEventListener('input', (e) => fetchVideos(e.target.value));
-
-// הפעלה
-init();// וודא שגם ב-loadSidebarLists אתה משתמש ב-cleanForJS(h.videos.title)
+init();
