@@ -153,6 +153,54 @@ async function loadSidebarLists() {
             </div>` : '').join('');
     }
 }
+// פונקציית גרירה (Drag)
+const player = document.getElementById('floating-player');
+const handle = document.getElementById('drag-handle');
+
+handle.onmousedown = function(e) {
+    let shiftX = e.clientX - player.getBoundingClientRect().left;
+    let shiftY = e.clientY - player.getBoundingClientRect().top;
+
+    function moveAt(pageX, pageY) {
+        player.style.left = pageX - shiftX + 'px';
+        player.style.top = pageY - shiftY + 'px';
+        player.style.bottom = 'auto'; // מבטל הצמדה לתחתית
+    }
+
+    function onMouseMove(event) { moveAt(event.pageX, event.pageY); }
+    document.addEventListener('mousemove', onMouseMove);
+    document.onmouseup = () => { document.removeEventListener('mousemove', onMouseMove); };
+};
+
+// האזנה למקלדת
+document.addEventListener('keydown', (e) => {
+    if (e.code === "Space") { // רווח להפסקה/הפעלה
+        e.preventDefault();
+        togglePlay();
+    }
+});
+
+function togglePlay() {
+    const iframe = document.getElementById('youtubePlayer');
+    const icon = document.getElementById('play-pause-icon');
+    // ביוטיוב iframe שליטה בנגן דורשת את ה-API של יוטיוב, 
+    // אבל פתרון פשוט הוא "לרענן" את ה-src או להשתמש ב-postMessage.
+    alert("שליטה מלאה ב-Play/Pause דורשת את YouTube IFrame API");
+}
+
+// עדכון פונקציית הנגינה הקיימת ב-app.js
+async function playVideo(id, title, channel) {
+    const playerDiv = document.getElementById('floating-player');
+    const iframe = document.getElementById('youtubePlayer');
+    
+    playerDiv.style.display = 'block';
+    iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1`;
+    
+    document.getElementById('current-title').innerText = title;
+    document.getElementById('current-channel').innerText = channel;
+    
+    // ... שאר הקוד של ההיסטוריה שכתבת ...
+}
 
 document.getElementById('globalSearch')?.addEventListener('input', (e) => fetchVideos(e.target.value));
 init();
