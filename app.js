@@ -7,13 +7,12 @@ let userFavorites = [];
 let debounceTimeout = null;
 let isPlaying = false;
 
-// פונקציה לניקוי תווים מיוחדים לפני שליחה ל-FTS
+// פונקציית עזר לניקוי תווים מיוחדים לפני שליחה ל-FTS
 function cleanFtsQuery(query) {
-    // מסיר כל תו שאינו אות, מספר או רווח כדי להגן על ה-DB
     return query.replace(/[^\w\sא-ת]/g, ' ').trim();
 }
 
-// פונקציה לטיפול בגרשים בטקסט שמוזרק ל-HTML
+// פונקציה שמגינה על טקסט מפני שבירת HTML ו-JS
 function escapeHtml(text) {
     if (!text) return "";
     return text
@@ -21,7 +20,7 @@ function escapeHtml(text) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;"); // מחליף גרש בקוד HTML כדי שלא ישבור את ה-JS
+        .replace(/'/g, "&#39;");
 }
 
 async function init() {
@@ -39,12 +38,13 @@ async function init() {
 
 function updateUserUI() {
     const userDiv = document.getElementById('user-profile');
-    if (currentUser && userDiv) {
+    if (currentUser && userDiv && currentUser.user_metadata) {
+        const avatar = currentUser.user_metadata.avatar_url || ""; // מניעת שגיאת null
         userDiv.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
-                <img src="${currentUser.user_metadata.avatar_url}" style="width:35px; border-radius:50%; border: 2px solid #1DB954;">
+                ${avatar ? `<img src="${avatar}" style="width:35px; border-radius:50%; border: 2px solid #1DB954;">` : ''}
                 <div style="display:flex; flex-direction:column;">
-                    <span style="font-size:14px; font-weight:bold;">${currentUser.user_metadata.full_name}</span>
+                    <span style="font-size:14px; font-weight:bold;">${escapeHtml(currentUser.user_metadata.full_name)}</span>
                     <span onclick="logout()" style="color:#b3b3b3; font-size:11px; cursor:pointer; text-decoration:underline;">התנתק</span>
                 </div>
             </div>
@@ -63,12 +63,9 @@ async function fetchVideos(query = "") {
     }
 
     const cleanQuery = cleanFtsQuery(rawQuery);
-    
-    // חיפוש FTS ישיר
     const { data } = await client.rpc('search_videos_prioritized', { search_term: cleanQuery });
     renderVideoGrid(data || []);
 
-    // תרגום וחיפוש נוסף
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(async () => {
         const translated = await getTranslation(cleanQuery);
@@ -89,25 +86,27 @@ async function getTranslation(text) {
 
 function renderVideoGrid(data, append = false) {
     const grid = document.getElementById('videoGrid');
-    if (!grid) return;
+    if (!grid || !data) return;
     
     const html = data.map(v => {
         const isFav = userFavorites.includes(v.id);
-        const title = safeStr(v.title);
-        const channel = safeStr(v.channel_title);
-        const desc = safeStr(v.description);
+        const vId = v.id;
+        const vTitle = escapeHtml(v.title);
+        const vChannel = escapeHtml(v.channel_title);
+        const vDesc = escapeHtml(v.description);
 
+        // שימוש בגרש נטוי בתוך ה-onclick למניעת SyntaxError
         return `
-            <div class="v-card" onclick="playVideo('${v.id}', '${title}', '${channel}')">
+            <div class="v-card" onclick="playVideo('${vId}', '${vTitle.replace(/'/g, "\\'")}', '${vChannel.replace(/'/g, "\\'")}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail}" loading="lazy">
-                    <div class="video-description-overlay">${desc}</div>
+                    <div class="video-description-overlay">${vDesc}</div>
                 </div>
                 <h3>${v.title}</h3>
                 <div class="card-footer">
                     <span>${v.channel_title}</span>
-                    <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${v.id}')">
-                        <i class="${isFav ? 'fa-solid' : 'fa-heart'} fa-heart" id="fav-icon-${v.id}"></i>
+                    <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${vId}')">
+                        <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart" id="fav-icon-${vId}"></i>
                     </button>
                 </div>
             </div>
@@ -120,19 +119,25 @@ function playVideo(id, title, channel) {
     const playerWin = document.getElementById('floating-player');
     const container = document.getElementById('youtubePlayer');
     
-    playerWin.style.display = 'flex'; // וודא שזה flex לפי ה-CSS החדש
-    container.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="width:100%; height:100%;"></iframe>`;
+    playerWin.style.display = 'flex'; // התאמה ל-CSS החדש
+    container.innerHTML = `
+        <iframe src="https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1" 
+                frameborder="0" allow="autoplay; encrypted-media" allowfullscreen 
+                style="width: 100%; height: 100%; display: block;">
+        </iframe>`;
     
     document.getElementById('current-title').innerText = title;
     document.getElementById('current-channel').innerText = channel;
-     if (currentUser) {
+    isPlaying = true;
+    updatePlayStatus(true);
+
+    if (currentUser) {
         client.from('history').upsert({ user_id: currentUser.id, video_id: id, created_at: new Date() });
     }
 }
-   
 
 function togglePlayPause() {
-    const iframe = document.getElementById('yt-iframe');
+    const iframe = document.querySelector('#youtubePlayer iframe');
     if (!iframe) return;
     const action = isPlaying ? 'pauseVideo' : 'playVideo';
     iframe.contentWindow.postMessage(JSON.stringify({"event": "command", "func": action, "args": ""}), "*");
@@ -149,25 +154,27 @@ function updatePlayStatus(playing) {
 const floatingPlayer = document.getElementById('floating-player');
 const dragHandle = document.getElementById('drag-handle');
 
-dragHandle.onmousedown = function(e) {
-    e.preventDefault();
-    const rect = floatingPlayer.getBoundingClientRect();
-    let shiftX = e.clientX - rect.left;
-    let shiftY = e.clientY - rect.top;
+if (dragHandle) {
+    dragHandle.onmousedown = function(e) {
+        e.preventDefault();
+        const rect = floatingPlayer.getBoundingClientRect();
+        let shiftX = e.clientX - rect.left;
+        let shiftY = e.clientY - rect.top;
 
-    function moveAt(pageX, pageY) {
-        floatingPlayer.style.left = pageX - shiftX + 'px';
-        floatingPlayer.style.top = pageY - shiftY + 'px';
-        floatingPlayer.style.bottom = 'auto';
-    }
+        function moveAt(pageX, pageY) {
+            floatingPlayer.style.left = pageX - shiftX + 'px';
+            floatingPlayer.style.top = pageY - shiftY + 'px';
+            floatingPlayer.style.bottom = 'auto';
+        }
 
-    function onMouseMove(event) { moveAt(event.clientX, event.clientY); }
-    document.addEventListener('mousemove', onMouseMove);
-    document.onmouseup = function() {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.onmouseup = null;
+        function onMouseMove(event) { moveAt(event.clientX, event.clientY); }
+        document.addEventListener('mousemove', onMouseMove);
+        document.onmouseup = function() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.onmouseup = null;
+        };
     };
-};
+}
 
 async function toggleFavorite(videoId) {
     if (!currentUser) return alert("התחבר קודם");
@@ -188,7 +195,7 @@ async function loadSidebarLists() {
     const { data: hist } = await client.from('history').select('video_id, videos(id, title)').eq('user_id', currentUser.id).limit(10).order('created_at', {ascending: false});
     if (hist) {
         document.getElementById('favorites-list').innerHTML = hist.map(h => h.videos ? `
-            <div class="nav-link" onclick="playVideo('${h.videos.id}', '${safeStr(h.videos.title)}', '')">
+            <div class="nav-link" onclick="playVideo('${h.videos.id}', '${escapeHtml(h.videos.title).replace(/'/g, "\\'")}', '')">
                 <i class="fa-solid fa-clock-rotate-left"></i> ${h.videos.title}
             </div>` : '').join('');
     }
