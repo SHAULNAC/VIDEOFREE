@@ -148,61 +148,35 @@ async function toggleFavorite(videoId) {
     const icon = document.getElementById(`fav-icon-${videoId}`);
     try {
         const { data: existing } = await client.from('favorites').select('*').eq('user_id', currentUser.id).eq('video_id', videoId).maybeSingle();
-        
         if (existing) {
-            // הסרה מהמועדפים
             await client.from('favorites').delete().eq('id', existing.id);
-            if (icon) {
-                icon.classList.replace('fa-solid', 'fa-regular');
-                icon.style.color = 'inherit';
-            }
+            if (icon) { icon.classList.replace('fa-solid', 'fa-regular'); icon.style.color = 'inherit'; }
         } else {
-            // הוספה למועדפים
             await client.from('favorites').insert([{ user_id: currentUser.id, video_id: videoId }]);
-            if (icon) {
-                icon.classList.replace('fa-regular', 'fa-solid');
-                icon.style.color = '#1DB954';
-            }
+            if (icon) { icon.classList.replace('fa-regular', 'fa-solid'); icon.style.color = '#1DB954'; }
         }
-        
-        // עדכון הסיידבר מיד לאחר השינוי
-        loadSidebarLists();
-        
-    } catch (e) { 
-        console.error("טעות בעדכון מועדפים:", e); 
-    }
+        loadSidebarLists(); // מעדכן את הרשימה בצד מיד
+    } catch (e) { console.error(e); }
 }
 
 async function playVideo(id, title, channel) {
     const player = document.getElementById('youtubePlayer');
     if (player) {
-        // 1. הפעלת הסרטון בנגן
         player.src = `https://www.youtube.com/embed/${id}?autoplay=1`;
-        
-        // 2. עדכון כותרת ושם ערוץ בבר הנגן
-        const titleElem = document.getElementById('current-title');
-        const channelElem = document.getElementById('current-channel');
-        if (titleElem) titleElem.innerText = title;
-        if (channelElem) channelElem.innerText = channel;
+        document.getElementById('current-title').innerText = title;
+        document.getElementById('current-channel').innerText = channel;
 
-        // 3. רישום חכם בהיסטוריה (Upsert)
         if (currentUser) {
             try {
-                // upsert דואג שאם הסרטון קיים הוא רק יתעדכן ויקפוץ למעלה
-                await client.from('history').upsert(
-                    { 
-                        user_id: currentUser.id, 
-                        video_id: id,
-                        created_at: new Date().toISOString() // מעדכן את הזמן כדי שיקפוץ לראש הרשימה
-                    }, 
-                    { onConflict: 'user_id, video_id' } // מזהה לפי הזוג הזה אם הסרטון כבר קיים
-                );
+                // שימוש ב-upsert כדי למנוע כפילויות ולהקפיץ לראש הרשימה
+                await client.from('history').upsert({ 
+                    user_id: currentUser.id, 
+                    video_id: id,
+                    created_at: new Date().toISOString() 
+                }, { onConflict: 'user_id, video_id' });
                 
-                // רענון הסיידבר
-                loadSidebarLists();
-            } catch (e) {
-                console.error("שגיאה בעדכון היסטוריה:", e);
-            }
+                loadSidebarLists(); // רענון הרשימה בסיידבר
+            } catch (e) { console.error("History error:", e); }
         }
     }
 }
@@ -210,41 +184,25 @@ async function playVideo(id, title, channel) {
 async function loadSidebarLists() {
     if (!currentUser) return;
 
-    // --- טעינת מועדפים ---
-    try {
-        const { data: favorites } = await client
-            .from('favorites')
-            .select('video_id, videos(id, title)')
-            .eq('user_id', currentUser.id)
-            .limit(10);
+    // טעינת מועדפים
+    const { data: favs } = await client.from('favorites').select('videos(id, title)').eq('user_id', currentUser.id);
+    const favList = document.getElementById('favorites-list');
+    if (favs && favList) {
+        favList.innerHTML = favs.map(f => f.videos ? `
+            <div class="nav-link" onclick="playVideo('${f.videos.id}', '${f.videos.title.replace(/'/g, "\\'")}', '')">
+                <i class="fa-solid fa-heart" style="color: #1DB954; font-size: 10px;"></i> ${f.videos.title}
+            </div>` : '').join('');
+    }
 
-        const favListDiv = document.getElementById('favorites-list');
-        if (favorites && favListDiv) {
-            favListDiv.innerHTML = favorites.map(f => f.videos ? `
-                <div class="nav-link sidebar-item" onclick="playVideo('${f.videos.id}', '${f.videos.title.replace(/'/g, "\\'")}', '')">
-                    <i class="fa-solid fa-play-circle" style="font-size: 10px;"></i> ${f.videos.title}
-                </div>` : '').join('');
-        }
-    } catch (e) { console.error("Error loading favorites:", e); }
-
-    // --- טעינת היסטוריה ---
-    try {
-        const { data: history } = await client
-            .from('history')
-            .select('video_id, videos(id, title)')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-        const historyListDiv = document.getElementById('history-list');
-        if (history && historyListDiv) {
-            historyListDiv.innerHTML = history.map(h => h.videos ? `
-                <div class="nav-link sidebar-item" onclick="playVideo('${h.videos.id}', '${h.videos.title.replace(/'/g, "\\'")}', '')">
-                    <i class="fa-solid fa-history" style="font-size: 10px;"></i> ${h.videos.title}
-                </div>` : '').join('');
-        }
-    } catch (e) { console.error("Error loading history:", e); }
+    // טעינת היסטוריה
+    const { data: hist } = await client.from('history').select('videos(id, title)').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(10);
+    const histList = document.getElementById('history-list');
+    if (hist && histList) {
+        histList.innerHTML = hist.map(h => h.videos ? `
+            <div class="nav-link" onclick="playVideo('${h.videos.id}', '${h.videos.title.replace(/'/g, "\\'")}', '')">
+                <i class="fa-solid fa-clock-rotate-left" style="font-size: 10px;"></i> ${h.videos.title}
+            </div>` : '').join('');
+    }
 }
-
 document.getElementById('globalSearch').addEventListener('input', (e) => fetchVideos(e.target.value));
 init();
