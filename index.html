@@ -38,13 +38,15 @@
         </section>
     </main>
 
-    <div id="floating-player" class="floating-window">
-        <div class="window-header" id="drag-handle">
-            <span class="drag-dots">⋮⋮⋮ גרירה</span>
-        </div>
-        <div id="youtubePlayer"></div>
-        <div class="resizer" id="resizer"></div>
+   <div id="floating-player" class="floating-window">
+    <div class="window-header" id="drag-handle">
+        <span class="drag-dots">⋮⋮⋮</span>
+        <button class="close-player-btn" onclick="closePlayer()">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
     </div>
+    <div id="youtubePlayer"></div>
+</div>>
 
     <footer class="player-bar">
     <div class="now-playing">
