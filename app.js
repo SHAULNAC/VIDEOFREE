@@ -27,7 +27,19 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+function formatDuration(isoDuration) {
+    if (!isoDuration || !isoDuration.startsWith('PT')) return "0:00";
+    const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    const hours = parseInt(match[1]) || 0;
+    const minutes = parseInt(match[2]) || 0;
+    const seconds = parseInt(match[3]) || 0;
 
+    const parts = [];
+    if (hours > 0) parts.push(hours);
+    parts.push(hours > 0 ? minutes.toString().padStart(2, '0') : minutes);
+    parts.push(seconds.toString().padStart(2, '0'));
+    return parts.join(':');
+}
 // --- אתחול ---
 
 async function init() {
@@ -153,7 +165,6 @@ function playVideo(data) {
 
     playerWin.style.display = 'flex'; 
 
-    // הגדרה אחת ויחידה של params
     const videoParams = new URLSearchParams({
         autoplay: 1,
         enablejsapi: 1,
@@ -166,7 +177,6 @@ function playVideo(data) {
         widget_referrer: 'https://www.youtube.com'
     });
 
-    // הזרקת ה-iframe
     container.innerHTML = `
         <iframe id="yt-iframe" 
                 src="https://www.youtube-nocookie.com/embed/${data.id}?${videoParams.toString()}" 
@@ -182,8 +192,9 @@ function playVideo(data) {
     const catElem = document.getElementById('current-category');
     if (catElem) catElem.textContent = data.cat || "כללי";
     
+    // שימוש בפונקציית המרת הזמן החדשה
     const durationElem = document.getElementById('video-duration');
-    if (durationElem) durationElem.textContent = data.d || "00:00";
+    if (durationElem) durationElem.textContent = formatDuration(data.d);
     
     if (document.getElementById('stat-views')) 
         document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v}`;
@@ -199,6 +210,13 @@ function playVideo(data) {
         descElem.textContent = data.desc.substring(0, 100) + "...";
     }
 
+    // הקפצת שאלת שימושיות אחרי 30 שניות
+    setTimeout(() => {
+        if (isPlaying && document.getElementById('yt-iframe')) {
+            showEfficiencyPoll(data.id);
+        }
+    }, 30000);
+
     // היסטוריה
     if (currentUser) {
         client.from('history').upsert([
@@ -210,6 +228,14 @@ function playVideo(data) {
 
     isPlaying = true;
     updatePlayStatus(true);
+}
+function closePlayer() {
+    const playerWin = document.getElementById('floating-player');
+    const container = document.getElementById('youtubePlayer');
+    playerWin.style.display = 'none';
+    container.innerHTML = ''; // עצירת הוידאו
+    isPlaying = false;
+    updatePlayStatus(false);
 }
 function initDraggable() {
     const player = document.getElementById('floating-player');
@@ -263,7 +289,25 @@ async function toggleFavorite(videoId) {
     const icon = document.getElementById(`fav-icon-${videoId}`);
     if (icon) icon.className = userFavorites.includes(videoId) ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
 }
+function showEfficiencyPoll(videoId) {
+    const poll = document.createElement('div');
+    poll.className = 'feedback-toast';
+    poll.innerHTML = `
+        <p style="margin:0 0 10px 0; font-size:13px;">כמה הסרטון היה שימושי?</p>
+        <button class="feedback-btn" onclick="submitEfficiency('${videoId}', 10, this)">מאוד שימושי</button>
+        <button class="feedback-btn" onclick="submitEfficiency('${videoId}', 5, this)">ככה ככה</button>
+        <button class="feedback-btn" onclick="submitEfficiency('${videoId}', 0, this)">לא עזר</button>
+    `;
+    document.body.appendChild(poll);
+}
 
+async function submitEfficiency(videoId, score, btn) {
+    const { error } = await client.from('videos').update({ efficiency_score: score }).eq('id', videoId);
+    if (!error) {
+        btn.parentElement.innerHTML = "תודה על המשוב!";
+        setTimeout(() => document.querySelectorAll('.feedback-toast').forEach(t => t.remove()), 2000);
+    }
+}
 async function loadSidebarLists() {
     if (!currentUser) return;
     const { data: hist } = await client.from('history').select('video_id, videos(id, title, channel_title)').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(10);
