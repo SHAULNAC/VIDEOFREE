@@ -217,3 +217,17 @@ body {
 .show-player { display: flex !important; }
 
 .fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; }
+/* עיצוב ספציפי לכרטיס ההגדרות בתחתית */
+.settings-card {
+    margin-top: auto; /* דוחף את הריבוע לתחתית ה-Sidebar אם יש מקום */
+    margin-bottom: 10px;
+}
+
+.settings-card .nav-link {
+    color: #b3b3b3;
+    font-size: 12px; /* מעט קטן יותר כדי לתת תחושה של "מידע משני" */
+}
+
+.settings-card .nav-link i {
+    font-size: 14px;
+}
