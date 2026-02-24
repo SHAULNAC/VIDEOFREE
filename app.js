@@ -146,26 +146,12 @@ function preparePlay(encodedData) {
 function playVideo(data) {
     const playerWin = document.getElementById('floating-player');
     const container = document.getElementById('youtubePlayer');
+    
+    if (!playerWin || !container) return;
+
     playerWin.style.display = 'flex'; 
 
-    const params = new URLSearchParams({
-        autoplay: 1, enablejsapi: 1, rel: 0, iv_load_policy: 3, origin: window.location.origin
-    });
-
-    container.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${data.id}?${params.toString()}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-    
-    // עדכון הבר התחתון עם כל הנתונים החדשים
-    document.getElementById('current-title').textContent = data.t;
-    document.getElementById('current-channel').textContent = data.c;
-    document.getElementById('current-category').textContent = data.cat;
-    document.getElementById('video-duration').textContent = data.d;
-    
-    document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v}`;
-    document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l}`;
-    document.getElementById('stat-rating').innerHTML = `<i class="fa-solid fa-star" style="color: gold;"></i> ${data.r}`;
-    
-    // הצגת תיאור מקוצר (למשל 100 תווים ראשונים)
-    document.getElementById('bottom-description').textContent = data.desc.substring(0, 100) + "...";
+    // הגדרת פרמטרים אופטימליים למהירות בנטפרי וביצועים
     const params = new URLSearchParams({
         autoplay: 1,
         enablejsapi: 1,
@@ -178,31 +164,58 @@ function playVideo(data) {
         widget_referrer: 'https://www.youtube.com'
     });
 
-    // שימוש בדומיין המופחת-עוגיות של יוטיוב מזרז משמעותית את הטעינה בנטפרי
+    // הזרקת הנגן (שימוש ב-nocookie לטעינה מהירה)
     container.innerHTML = `
         <iframe id="yt-iframe" 
-                src="https://www.youtube-nocookie.com/embed/${id}?${params.toString()}" 
+                src="https://www.youtube-nocookie.com/embed/${data.id}?${params.toString()}" 
                 frameborder="0" 
                 allow="autoplay; encrypted-media; picture-in-picture" 
                 allowfullscreen>
         </iframe>`;
     
-    document.getElementById('current-title').innerText = title;
-    document.getElementById('current-channel').innerText = channel;
+    // --- עדכון הבר התחתון עם נתוני הטקסט והסטטיסטיקה ---
     
-    // שמירת היסטוריה
-    if (currentUser) {
-        client.from('history').upsert([
-            { user_id: currentUser.id, video_id: id, created_at: new Date() }
-        ]).then(() => loadSidebarLists());
+    // כותרת, ערוץ וקטגוריה
+    document.getElementById('current-title').textContent = data.t;
+    document.getElementById('current-channel').textContent = data.c;
+    
+    const catElem = document.getElementById('current-category');
+    if (catElem) catElem.textContent = data.cat;
+    
+    // אורך הסרטון
+    const durationElem = document.getElementById('video-duration');
+    if (durationElem) durationElem.textContent = data.d;
+    
+    // סטטיסטיקות (צפיות, לייקים, דירוג)
+    const viewsElem = document.getElementById('stat-views');
+    if (viewsElem) viewsElem.innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v}`;
+    
+    const likesElem = document.getElementById('stat-likes');
+    if (likesElem) likesElem.innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l}`;
+    
+    const ratingElem = document.getElementById('stat-rating');
+    if (ratingElem) ratingElem.innerHTML = `<i class="fa-solid fa-star" style="color: gold;"></i> ${data.r}`;
+    
+    // תיאור מקוצר (100 תווים ראשונים)
+    const descElem = document.getElementById('bottom-description');
+    if (descElem && data.desc) {
+        descElem.textContent = data.desc.substring(0, 100) + "...";
     }
+
+    // שמירת היסטוריה ב-Supabase
+    if (typeof currentUser !== 'undefined' && currentUser) {
+        client.from('history').upsert([
+            { user_id: currentUser.id, video_id: data.id, created_at: new Date() }
+        ]).then(() => {
+            if (typeof loadSidebarLists === 'function') loadSidebarLists();
+        });
+    }
+
+    // עדכון מצב נגינה
     isPlaying = true;
-    updatePlayStatus(true);
-
-
-
-    isPlaying = true;
-    if (typeof updatePlayStatus === 'function') updatePlayStatus(true);
+    if (typeof updatePlayStatus === 'function') {
+        updatePlayStatus(true);
+    }
 }
 
 function initDraggable() {
