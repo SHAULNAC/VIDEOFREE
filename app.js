@@ -99,20 +99,26 @@ function renderVideoGrid(data, append = false) {
     
     const html = data.map(v => {
         const isFav = userFavorites.includes(v.id);
-        const vTitle = escapeHtml(v.title);
-        const vChannel = escapeHtml(v.channel_title);
-        const vDesc = escapeHtml(v.description);
+        
+        // 1. הכנת הטקסט לתצוגה ב-HTML (מונע הזרקת קוד)
+        const displayTitle = escapeHtml(v.title);
+        const displayChannel = escapeHtml(v.channel_title);
+        const displayDesc = escapeHtml(v.description);
 
-        // תיקון: החלפת גרשים בגרש נטוי בתוך ה-onclick למניעת Syntax Error
+        // 2. הכנת הטקסט למעבר בתוך פונקציית JS (מטפל בגרשים שגורמים לשגיאת Syntax)
+        // אנחנו משתמשים ב-JSON.stringify כדי שהדפדפן יטפל בבריחה של תווים באופן אוטומטי
+        const jsTitle = v.title.replace(/'/g, "\\'");
+        const jsChannel = v.channel_title.replace(/'/g, "\\'");
+
         return `
-            <div class="v-card" onclick="playVideo('${v.id}', '${vTitle.replace(/'/g, "\\'")}', '${vChannel.replace(/'/g, "\\'")}')">
+            <div class="v-card" onclick="playVideo('${v.id}', '${jsTitle}', '${jsChannel}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail}" loading="lazy">
-                    <div class="video-description-overlay">${vDesc}</div>
+                    <div class="video-description-overlay">${displayDesc}</div>
                 </div>
-                <h3>${v.title}</h3>
+                <h3>${displayTitle}</h3>
                 <div class="card-footer">
-                    <span>${v.channel_title}</span>
+                    <span>${displayChannel}</span>
                     <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${v.id}')">
                         <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart" id="fav-icon-${v.id}"></i>
                     </button>
