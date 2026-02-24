@@ -370,29 +370,27 @@ async function loadSidebarLists() {
 }
 
 // פונקציות להצגת הנתונים בגריד הראשי
+// פונקציה להצגת היסטוריה
 async function displayHistory() {
-    const { data } = await client.from('history')
-        .select('videos(*)')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
+    if (!currentUser) return;
+    const { data } = await client.from('history').select('*, videos(*)').eq('user_id', currentUser.id).order('created_at', { ascending: false });
     
-    if (data) {
-        const videos = data.map(h => h.videos).filter(v => v !== null);
-        document.getElementById('main-title').textContent = "היסטוריית צפייה";
-        renderVideoGrid(videos);
-    }
+    // בדיקה אם האלמנט קיים לפני עדכון הטקסט
+    const title = document.getElementById('main-title');
+    if (title) title.textContent = "היסטוריית צפייה";
+
+    if (data) renderVideoGrid(data.map(i => i.videos).filter(v => v));
 }
 
+// פונקציה להצגת מועדפים
 async function displayFavorites() {
-    const { data } = await client.from('favorites')
-        .select('videos(*)')
-        .eq('user_id', currentUser.id);
+    if (!currentUser) return;
+    const { data } = await client.from('favorites').select('*, videos(*)').eq('user_id', currentUser.id);
     
-    if (data) {
-        const videos = data.map(f => f.videos).filter(v => v !== null);
-        document.getElementById('main-title').textContent = "מועדפים";
-        renderVideoGrid(videos);
-    }
+    const title = document.getElementById('main-title');
+    if (title) title.textContent = "מועדפים";
+
+    if (data) renderVideoGrid(data.map(i => i.videos).filter(v => v));
 }
 
 // --- הוספת פונקציית סגירה לנגן ---
