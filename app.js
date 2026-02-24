@@ -103,15 +103,15 @@ function renderVideoGrid(data, append = false) {
     
     const html = data.map(v => {
         const isFav = userFavorites.includes(v.id);
-        const categoryName = categoryMap[v.category_id] || "כללי";
         
-        // יצירת אובייקט נתונים ואריזתו ב-Base64 כדי למנוע שגיאות Syntax
-        const videoObj = {
+        // יצירת אובייקט נתונים ואריזתו ב-Base64 חסין לשגיאות Syntax
+        const videoData = {
             id: v.id,
             title: v.title,
             channel: v.channel_title
         };
-        const safeData = btoa(encodeURIComponent(JSON.stringify(videoObj)));
+        // מקודדים ל-UTF8 ואז ל-Base64 כדי לתמוך בעברית וגרשים
+        const safeData = btoa(unescape(encodeURIComponent(JSON.stringify(videoData))));
 
         return `
             <div class="v-card" onclick="preparePlay('${safeData}')">
@@ -121,7 +121,7 @@ function renderVideoGrid(data, append = false) {
                 </div>
                 <h3>${escapeHtml(v.title)}</h3>
                 <div class="card-footer">
-                    <span>${escapeHtml(v.channel_title)} | ${categoryName}</span>
+                    <span>${escapeHtml(v.channel_title)}</span>
                     <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${v.id}')">
                         <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart" id="fav-icon-${v.id}"></i>
                     </button>
@@ -130,7 +130,6 @@ function renderVideoGrid(data, append = false) {
     }).join('');
     grid.innerHTML = append ? grid.innerHTML + html : html;
 }
-
 function preparePlay(encodedData) {
     try {
         const decodedData = JSON.parse(decodeURIComponent(atob(encodedData)));
