@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ספריית הוידיאו שלך</title>
+    <title>VideoStation | ספריית הוידיאו שלך</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -21,20 +21,20 @@
             <div class="nav-link" onclick="document.getElementById('globalSearch').focus()">
                 <i class="fa-solid fa-magnifying-glass"></i> חיפוש
             </div>
-           
-              <div class="nav-card library">
-            <div id="favorites-list" class="sidebar-list"></div>
-        </div>
-    </aside>
-    <div class="nav-card settings-card">
-    <div class="nav-link" onclick="showPrivacy()">
-        <i class="fa-solid fa-shield-halved"></i> 
-        <span>פרטיות ותנאים</span>
-    </div>
-</div>
         </div>
 
-      
+        <div class="nav-card library">
+            <div id="favorites-list" class="sidebar-list">
+                </div>
+        </div>
+
+        <div class="nav-card settings-card">
+            <div class="nav-link" onclick="showPrivacy()">
+                <i class="fa-solid fa-shield-halved"></i> 
+                <span>פרטיות ותנאים</span>
+            </div>
+        </div>
+    </aside>
 
     <main class="content">
         <header class="top-nav">
@@ -45,14 +45,13 @@
         </header>
 
         <section id="gallery-container">
-            <div class="video-grid" id="videoGrid">
-                </div>
+            <div class="video-grid" id="videoGrid"></div>
         </section>
     </main>
 
     <div id="floating-player" class="floating-window">
         <div class="window-header" id="drag-handle">
-            <span class="drag-dots">⋮⋮⋮</span>
+            <span class="drag-dots">⋮⋮ גרירה</span>
             <button class="close-player-btn" onclick="closePlayer()" style="background:none; border:none; color:white; cursor:pointer; position:absolute; left:10px;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -66,38 +65,40 @@
             <p id="current-title">טוען סרטון...</p>
             <div class="video-meta-sub">
                 <span id="current-channel"></span>
-                <div class="meta-sep"></div> <span id="stat-views"></span>
-                <div class="meta-sep"></div> <span id="stat-likes"></span>
+                <div class="meta-sep"></div> 
+                <span id="stat-views"></span>
+                <div class="meta-sep"></div> 
+                <span id="stat-likes"></span>
             </div>
         </div>
 
         <div class="player-center">
-            <div id="bottom-description" class="bottom-desc">
-                </div>
+            <div id="bottom-description" class="bottom-desc"></div>
         </div>
 
         <div class="player-right">
             <span id="current-category"></span>
         </div>
     </footer>
+
     <div id="privacy-modal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>מדיניות פרטיות ותנאי שימוש</h2>
-            <button onclick="closePrivacy()" class="close-modal-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p><strong>1. המידע שאנו אוספים:</strong> בשימוש בהתחברות Google, אנו שומרים את שמך ותמונת הפרופיל שלך כדי להתאים אישית את החוויה.</p>
-            <p><strong>2. שמירת נתונים:</strong> היסטוריית הצפייה והמועדפים נשמרים במסד הנתונים לצורך הצגתם עבורך בלבד. איננו משתפים מידע זה עם צדדים שלישיים.</p>
-            <p><strong>3. עוגיות (Cookies):</strong> האתר משתמש בעוגיות טכניות בלבד לצורך ניהול החיבור למערכת.</p>
-            <p><strong>4. YouTube:</strong> האתר משתמש ב-YouTube API Services. בשימוש באתר זה, הנך מסכים לתנאי השימוש של YouTube ולמדיניות הפרטיות של Google.</p>
-            <p><strong>5. רישיון:</strong> הקוד מופץ תחת רישיון MIT.</p>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closePrivacy()" class="modal-confirm-btn">הבנתי, תודה</button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>מדיניות פרטיות ותנאי שימוש</h2>
+                <button onclick="closePrivacy()" class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>1. המידע שאנו אוספים:</strong> בשימוש בהתחברות Google, אנו שומרים את שמך ותמונת הפרופיל שלך כדי להתאים אישית את החוויה.</p>
+                <p><strong>2. שמירת נתונים:</strong> היסטוריית הצפייה והמועדפים נשמרים במסד הנתונים לצורך הצגתם עבורך בלבד.</p>
+                <p><strong>3. עוגיות (Cookies):</strong> האתר משתמש בעוגיות טכניות בלבד לצורך ניהול החיבור.</p>
+                <p><strong>4. YouTube:</strong> האתר משתמש ב-YouTube API. בשימוש באתר, הנך מסכים לתנאי השימוש של YouTube.</p>
+                <p><strong>5. רישיון:</strong> הקוד מופץ תחת רישיון MIT.</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closePrivacy()" class="modal-confirm-btn">הבנתי, תודה</button>
+            </div>
         </div>
     </div>
-</div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="app.js"></script>
