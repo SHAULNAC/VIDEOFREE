@@ -89,23 +89,104 @@ function renderVideoGrid(data) {
     }).join('');
 }
 
-async function playVideo(id, title, channel) {
-    const player = document.getElementById('youtubePlayer');
-    if (!player) return;
+let player; 
+let isPlayerReady = false;
 
-    player.src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+// 1. אתחול הנגן של יוטיוב
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('youtubePlayer', {
+        height: '100%',
+        width: '100%',
+        playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0, 'modestbranding': 1 },
+        events: {
+            'onReady': () => { isPlayerReady = true; },
+            'onStateChange': (event) => {
+                const icon = document.getElementById('play-icon');
+                if (event.data === YT.PlayerState.PLAYING) icon.classList.replace('fa-play', 'fa-pause');
+                else icon.classList.replace('fa-pause', 'fa-play');
+            }
+        }
+    });
+}
+
+// 2. פונקציית הנגינה המעודכנת
+async function playVideo(id, title, channel) {
+    const playerDiv = document.getElementById('floating-player');
+    playerDiv.style.display = 'block';
+
+    if (isPlayerReady) {
+        player.loadVideoById(id);
+    }
+
     document.getElementById('current-title').innerText = title;
     document.getElementById('current-channel').innerText = channel;
 
-    if (currentUser) {
-        await client.from('history').upsert({ 
-            user_id: currentUser.id, 
-            video_id: id,
-            created_at: new Date().toISOString() 
-        }, { onConflict: 'user_id, video_id' });
-        loadSidebarLists();
+    // משיכת פרטים נוספים מה-DB (תאריך, תיאור, אורך)
+    const { data, error } = await client.from('videos').select('*').eq('id', id).single();
+    if (data) {
+        document.getElementById('bottom-description').innerText = data.description || "";
+        document.getElementById('video-duration').innerText = data.duration || "00:00";
+        if (data.published_at) {
+            document.getElementById('current-date').innerText = new Date(data.published_at).toLocaleDateString('he-IL');
+        }
     }
 }
+
+// 3. שליטה במקלדת
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || !isPlayerReady) return;
+
+    if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayPause();
+    }
+    if (e.code === 'ArrowRight') player.seekTo(player.getCurrentTime() + 5);
+    if (e.code === 'ArrowLeft') player.seekTo(player.getCurrentTime() - 5);
+});
+
+function togglePlayPause() {
+    if (player.getPlayerState() === 1) player.pauseVideo();
+    else player.playVideo();
+}
+
+// 4. לוגיקת גרירה ושינוי גודל (Resize & Drag)
+const floatingPlayer = document.getElementById('floating-player');
+const dragHandle = document.getElementById('drag-handle');
+const resizer = document.getElementById('resizer');
+
+// גרירה
+dragHandle.onmousedown = (e) => {
+    let shiftX = e.clientX - floatingPlayer.getBoundingClientRect().left;
+    let shiftY = e.clientY - floatingPlayer.getBoundingClientRect().top;
+    
+    const move = (e) => {
+        floatingPlayer.style.left = e.clientX - shiftX + 'px';
+        floatingPlayer.style.top = e.clientY - shiftY + 'px';
+        floatingPlayer.style.bottom = 'auto';
+    };
+    
+    document.onmousemove = move;
+    document.onmouseup = () => document.onmousemove = null;
+};
+
+// שינוי גודל
+resizer.onmousedown = (e) => {
+    e.preventDefault();
+    const startWidth = floatingPlayer.offsetWidth;
+    const startHeight = floatingPlayer.offsetHeight;
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const resize = (e) => {
+        const width = startWidth + (e.clientX - startX);
+        const height = width * 0.5625; // שומר על יחס 16:9
+        floatingPlayer.style.width = width + 'px';
+        floatingPlayer.style.height = (height + 30) + 'px'; // +30 עבור ה-header
+    };
+
+    document.onmousemove = resize;
+    document.onmouseup = () => document.onmousemove = null;
+};
 
 async function toggleFavorite(videoId) {
     if (!currentUser) return alert("עליך להתחבר כדי להוסיף למועדפים");
