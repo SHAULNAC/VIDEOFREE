@@ -58,19 +58,59 @@ body {
 
 .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim); }
 
-/* Floating Player */
+/* ... שמירה על שאר ההגדרות הקודמות ... */
+
+/* Floating Player - תיקון תצוגה */
 .floating-window {
-    position: fixed; bottom: 100px; left: 20px; width: 350px; height: 230px;
-    background: #000; border-radius: 12px; overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 9999; display: none; border: 1px solid #333;
+    position: fixed;
+    bottom: 100px;
+    left: 20px;
+    width: 350px;
+    height: 230px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden; /* מונע בריחה של תוכן */
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    z-index: 9999;
+    display: none;
+    border: 1px solid #333;
+    display: flex;
+    flex-direction: column; /* מסדר את ה-header והנגן אחד מעל השני */
 }
 
-.window-header { height: 30px; background: #181818; cursor: move; display: flex; justify-content: center; align-items: center; color: #b3b3b3; }
-#youtubePlayer { width: 100%; height: calc(100% - 30px); }
+.window-header {
+    height: 30px;
+    background: #181818;
+    cursor: move;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #b3b3b3;
+    flex-shrink: 0; /* מונע מההדר להתכווץ */
+}
+
+/* התיקון העיקרי לחיתוך הוידיאו */
+#youtubePlayer {
+    flex-grow: 1; /* לוקח את כל שאר הגובה הפנוי */
+    width: 100%;
+    background: #000;
+}
+
+#youtubePlayer iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
 
 .resizer {
-    width: 15px; height: 15px; position: absolute; right: 0; bottom: 0;
-    cursor: nwse-resize; z-index: 10;
+    width: 15px;
+    height: 15px;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+    z-index: 10;
 }
 
 /* Player Bar */
