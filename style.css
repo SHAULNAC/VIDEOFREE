@@ -8,11 +8,15 @@
     --text-dim: #b3b3b3;
     --border-color: #282828;
 }
-/* הגדרת פונט ואיפוס כללי לכל האלמנטים */
-*, body, button, input {
-    font-family: 'Rubik', sans-serif !important;
-    margin: 0;
-    box-sizing: border-box; /* מומלץ להוסיף כדי למנוע חריגות ברוחב */
+/* הגדרה גורפת לכל האתר */
+*, body, button, input, select, textarea {
+    font-family: 'Rubik', sans-serif; /* או Heebo */
+}
+
+/* החזרת הגופן המקורי לאייקונים - זה יפתור את הריבועים */
+.fa, .fas, .far, .fal, .fab, .fa-solid, .fa-regular, .fa-brands {
+    font-family: "Font Awesome 6 Free" !important; /* שם הפונט של הספרייה */
+    font-weight: 900; 
 }
 
 
