@@ -5,6 +5,7 @@
     --spotify-green: #1DB954;
     --text-white: #ffffff;
     --text-dim: #b3b3b3;
+    --border-color: #282828;
 }
 
 body {
@@ -14,7 +15,7 @@ body {
     color: var(--text-white);
     display: grid; 
     grid-template-columns: 260px 1fr;
-    grid-template-rows: 1fr 90px; 
+    grid-template-rows: 1fr 75px; /* גובה מעודכן לסרגל */
     height: 100vh;
     overflow: hidden;
 }
@@ -48,17 +49,18 @@ body {
 .card-img-container { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 4px; overflow: hidden; }
 .v-card img { width: 100%; height: 100%; object-fit: cover; }
 
+/* תצוגת הזמן על הקוביה */
 .duration-badge {
-    position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.8);
-    color: white; padding: 2px 5px; border-radius: 4px; font-size: 11px;
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 2px 6px;
+    font-size: 11px;
+    border-radius: 4px;
+    font-weight: bold;
 }
-
-.video-description-overlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.85); color: #eee; font-size: 11px;
-    padding: 10px; opacity: 0; transition: 0.3s; overflow-y: auto; pointer-events: none; z-index: 5;
-}
-.v-card:hover .video-description-overlay { opacity: 1; }
 
 .v-card h3 {
     font-size: 13px; margin: 10px 0 5px 0; height: 2.6em; line-height: 1.3;
@@ -67,113 +69,100 @@ body {
 
 .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim); }
 
-/* --- Floating Player (תיקון הסרטון בחלון) --- */
+/* Floating Player */
 .floating-window {
-    position: fixed; 
-    bottom: 100px; 
-    left: 20px; 
-    width: 380px; 
-    height: 260px;
-    background: #000; 
-    border-radius: 12px; 
-    overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8); 
-    z-index: 9999; 
-    display: none; 
+    position: fixed; bottom: 85px; left: 20px; width: 380px; height: 260px;
+    background: #000; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 9999; display: none; border: 1px solid #333;
     flex-direction: column;
-    border: 1px solid #333;
 }
 
-.window-header { 
-    height: 35px; 
-    background: #181818; 
-    cursor: move; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    color: #b3b3b3; 
-    font-size: 12px;
-    flex-shrink: 0;
-}
+.window-header { height: 35px; background: #181818; cursor: move; display: flex; justify-content: center; align-items: center; color: #b3b3b3; font-size: 12px; }
+#youtubePlayer { width: 100%; flex-grow: 1; position: relative; }
+#yt-iframe { width: 100% !important; height: 100% !important; border: none; display: block; }
 
-#youtubePlayer { 
-    width: 100%; 
-    flex-grow: 1; /* לוקח את כל השטח שנשאר מתחת לכותרת */
-    position: relative;
-}
+.resizer { width: 15px; height: 15px; position: absolute; right: 0; bottom: 0; cursor: nwse-resize; z-index: 10000; }
 
-#yt-iframe {
-    width: 100% !important;
-    height: 100% !important;
-    border: none;
-    display: block;
-}
-
-.resizer {
-    width: 15px; height: 15px; position: absolute; right: 0; bottom: 0;
-    cursor: nwse-resize; z-index: 10000;
-}
-
-/* --- Player Bar (תיקון נראות הסרגל) --- */
+/* --- Spotify Style Player Bar --- */
 .player-bar {
     grid-column: span 2; 
     background: #000; 
-    border-top: 1px solid #282828;
-    display: grid; 
-    grid-template-columns: 1fr 2fr 1fr; 
-    align-items: center; 
-    padding: 0 20px;
-    height: 90px;
-    z-index: 10000;
-}
-
-.now-playing { display: flex; align-items: center; gap: 15px; overflow: hidden; }
-
-.player-center { 
+    border-top: 1px solid var(--border-color);
     display: flex; 
-    flex-direction: column; 
     align-items: center; 
-    justify-content: center;
-    gap: 8px;
+    padding: 0 25px;
+    height: 75px;
+    z-index: 10000;
+    justify-content: space-between;
 }
 
-.player-right {
+/* חלק ימני: מידע בסיסי */
+.now-playing {
     display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 25%;
+    overflow: hidden;
+}
+
+#current-title {
+    font-weight: bold;
+    font-size: 14px;
+    color: white;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.video-meta-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    display: flex;
+    gap: 8px;
     align-items: center;
-    justify-content: flex-end;
-    gap: 15px;
 }
 
-.main-play-btn { 
-    background: white; border: none; border-radius: 50%; 
-    width: 38px; height: 38px; cursor: pointer; 
-    transition: 0.2s; display: flex; align-items: center; justify-content: center;
-}
-.main-play-btn:hover { transform: scale(1.05); }
+/* פס מפריד בין נתונים */
+.meta-sep { color: #444; }
 
-.bottom-desc { 
-    font-size: 11px; 
-    color: var(--text-dim); 
-    text-align: center; 
+/* חלק מרכזי: תיאור */
+.player-center {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 40px;
+    max-width: 50%;
+}
+
+.bottom-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    max-width: 500px;
+    line-height: 1.4;
 }
 
-.video-meta-sub { font-size: 11px; color: var(--text-dim); }
-
-.video-stats-spotify {
+/* חלק שמאלי: קטגוריה */
+.player-right {
+    width: 20%;
     display: flex;
-    gap: 12px;
+    justify-content: flex-end;
+    align-items: center;
     font-size: 12px;
-    color: var(--text-dim);
+    color: var(--spotify-green);
+    font-weight: bold;
+    letter-spacing: 0.5px;
 }
 
-.hidden-player { display: none; }
-.show-player { display: grid; }
+.hidden-player { display: none !important; }
+.show-player { display: flex !important; }
 
-/* Utility */
-.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; }
-.fav-btn:hover { color: white; }
+/* Buttons & Icons */
+.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: 0.2s; }
+.fav-btn:hover { color: white; transform: scale(1.1); }
