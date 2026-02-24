@@ -24,11 +24,22 @@ function escapeHtml(text) {
 }
 
 // 3. פונקציית הגנה על טקסט בתוך פקודות JavaScript (כמו onclick)
+// הוסף את פונקציית העזר הזו בראש הקובץ אם היא לא קיימת
 function escapeJS(text) {
     if (!text) return "";
-    return text.replace(/'/g, "\\\\'"); // סלאש כפול לגרש בודד
+    // החלפת גרש בודד בגרש עם בריחה כפולה עבור ה-HTML onclick
+    return text.replace(/'/g, "\\\\'");
 }
 
+// בתוך renderVideoGrid, שנה את שורת ה-onclick:
+const safeTitle = escapeJS(v.title || "");
+const safeChannel = escapeJS(v.channel_title || "");
+
+// השורה ב-HTML צריכה להיראות כך:
+return `
+    <div class="v-card" onclick="playVideo('${v.id}', '${safeTitle}', '${safeChannel}')">
+    ...
+`;
 async function init() {
     const { data: { user } } = await client.auth.getUser();
     currentUser = user;
