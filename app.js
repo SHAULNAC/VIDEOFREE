@@ -5,8 +5,9 @@ const client = supabase.createClient(SB_URL, SB_KEY);
 let currentUser = null;
 let userFavorites = [];
 let debounceTimeout = null;
-let isPlaying = false; // מעקב אחרי מצב נגינה בנטפרי
+let isPlaying = false;
 
+// אתחול
 async function init() {
     const { data: { user } } = await client.auth.getUser();
     currentUser = user;
@@ -17,7 +18,6 @@ async function init() {
         userFavorites = favs ? favs.map(f => f.video_id) : [];
         loadSidebarLists();
     }
-    
     fetchVideos();
 }
 
@@ -39,7 +39,7 @@ function updateUserUI() {
 async function login() { await client.auth.signInWithOAuth({ provider: 'google' }); }
 async function logout() { await client.auth.signOut(); window.location.reload(); }
 
-// --- חיפוש FTS ---
+// --- חיפוש FTS ותרגום ---
 async function fetchVideos(query = "") {
     const searchQuery = query.trim();
     if (!searchQuery) {
@@ -48,6 +48,7 @@ async function fetchVideos(query = "") {
         return;
     }
 
+    // חיפוש FTS
     const { data } = await client.rpc('search_videos_prioritized', { search_term: searchQuery });
     renderVideoGrid(data || []);
 
@@ -55,8 +56,8 @@ async function fetchVideos(query = "") {
     debounceTimeout = setTimeout(async () => {
         const translated = await getTranslation(searchQuery);
         if (translated && translated.toLowerCase() !== searchQuery.toLowerCase()) {
-            const { data: translatedData } = await client.rpc('search_videos_prioritized', { search_term: translated });
-            if (translatedData) renderVideoGrid(translatedData, true);
+            const { data: transData } = await client.rpc('search_videos_prioritized', { search_term: translated });
+            if (transData) renderVideoGrid(transData, true);
         }
     }, 800);
 }
@@ -74,8 +75,9 @@ function renderVideoGrid(data, append = false) {
     if (!grid) return;
     const html = data.map(v => {
         const isFav = userFavorites.includes(v.id);
+        const title = (v.title || "").replace(/'/g, "\\'");
         return `
-            <div class="v-card" onclick="playVideo('${v.id}', '${v.title.replace(/'/g, "\\'")}', '${v.channel_title.replace(/'/g, "\\'")}')">
+            <div class="v-card" onclick="playVideo('${v.id}', '${title}', '${(v.channel_title || "").replace(/'/g, "\\'")}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail}" loading="lazy">
                     <div class="video-description-overlay">${(v.description || "").replace(/'/g, "\\'")}</div>
@@ -93,23 +95,28 @@ function renderVideoGrid(data, append = false) {
     grid.innerHTML = append ? grid.innerHTML + html : html;
 }
 
-// --- נגן ופקדים ---
-async function playVideo(id, title, channel) {
+// --- נגן ופקדים (עקיפת נטפרי) ---
+function playVideo(id, title, channel) {
     const playerWin = document.getElementById('floating-player');
-    const iframeContainer = document.getElementById('youtubePlayer');
+    const container = document.getElementById('youtubePlayer');
     
     playerWin.style.display = 'block';
-    // שימוש ב-Embed ישיר שעובד טוב בנטפרי
-    iframeContainer.innerHTML = `<iframe id="yt-iframe" width="100%" height="100%" src="https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    // שימוש ב-iframe פשוט ללא API מסובך שנטפרי חוסמת
+    container.innerHTML = `
+        <iframe id="yt-iframe" 
+                src="https://www.youtube.com/embed/${id}?autoplay=1&enablejsapi=1&rel=0" 
+                frameborder="0" 
+                allow="autoplay; encrypted-media" 
+                allowfullscreen>
+        </iframe>`;
     
     document.getElementById('current-title').innerText = title;
     document.getElementById('current-channel').innerText = channel;
     isPlaying = true;
-    updatePlayIcon();
+    updatePlayStatus(true);
 
     if (currentUser) {
-        await client.from('history').upsert({ user_id: currentUser.id, video_id: id, created_at: new Date() });
-        loadSidebarLists();
+        client.from('history').upsert({ user_id: currentUser.id, video_id: id, created_at: new Date() });
     }
 }
 
@@ -117,33 +124,39 @@ function togglePlayPause() {
     const iframe = document.getElementById('yt-iframe');
     if (!iframe) return;
 
-    const command = isPlaying ? 'pauseVideo' : 'playVideo';
-    iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: command, args: [] }), '*');
-    
+    // שליחת פקודה ל-iframe גם ללא ה-API הרשמי של ה-script
+    const action = isPlaying ? 'pauseVideo' : 'playVideo';
+    iframe.contentWindow.postMessage(JSON.stringify({
+        "event": "command",
+        "func": action,
+        "args": ""
+    }), "*");
+
     isPlaying = !isPlaying;
-    updatePlayIcon();
+    updatePlayStatus(isPlaying);
 }
 
-function updatePlayIcon() {
+function updatePlayStatus(playing) {
     const icon = document.getElementById('play-icon');
-    if (icon) {
-        icon.className = isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
-    }
+    if (icon) icon.className = playing ? 'fa-solid fa-pause' : 'fa-solid fa-play';
 }
 
-// --- גרירה (תיקון מלא) ---
+// --- לוגיקת גרירה מתוקנת ---
 const floatingPlayer = document.getElementById('floating-player');
 const dragHandle = document.getElementById('drag-handle');
 
 dragHandle.onmousedown = function(e) {
     e.preventDefault();
-    let shiftX = e.clientX - floatingPlayer.getBoundingClientRect().left;
-    let shiftY = e.clientY - floatingPlayer.getBoundingClientRect().top;
+    
+    // מציב את האלמנט במיקום אבסולוטי כדי שלא יקפוץ
+    const rect = floatingPlayer.getBoundingClientRect();
+    let shiftX = e.clientX - rect.left;
+    let shiftY = e.clientY - rect.top;
 
     function moveAt(pageX, pageY) {
         floatingPlayer.style.left = pageX - shiftX + 'px';
         floatingPlayer.style.top = pageY - shiftY + 'px';
-        floatingPlayer.style.bottom = 'auto';
+        floatingPlayer.style.bottom = 'auto'; // ביטול ה-CSS המקורי
     }
 
     function onMouseMove(event) {
@@ -158,13 +171,11 @@ dragHandle.onmousedown = function(e) {
     };
 };
 
-// מניעת באג שבו הגרירה "נתקעת" כשנכנסים עם העכבר מעל ה-Iframe
-floatingPlayer.onmouseleave = () => {
-    // אופציונלי: אפשר להוסיף כאן לוגיקה אם הגרירה בורחת
-};
+// מניעת איבוד גרירה כשנכנסים ל-iframe
+dragHandle.ondragstart = function() { return false; };
 
 async function toggleFavorite(videoId) {
-    if (!currentUser) return alert("התחבר תחילה");
+    if (!currentUser) return alert("התחבר קודם");
     const isFav = userFavorites.includes(videoId);
     if (isFav) {
         await client.from('favorites').delete().eq('user_id', currentUser.id).eq('video_id', videoId);
@@ -175,16 +186,15 @@ async function toggleFavorite(videoId) {
     }
     const icon = document.getElementById(`fav-icon-${videoId}`);
     if(icon) icon.className = userFavorites.includes(videoId) ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-    loadSidebarLists();
 }
 
 async function loadSidebarLists() {
     if (!currentUser) return;
-    const { data: favs } = await client.from('favorites').select('video_id, videos(id, title)').eq('user_id', currentUser.id);
-    if (favs) {
-        document.getElementById('favorites-list').innerHTML = favs.map(f => f.videos ? `
-            <div class="nav-link" onclick="playVideo('${f.videos.id}', '${f.videos.title.replace(/'/g, "\\'")}', '')">
-                ${f.videos.title}
+    const { data: hist } = await client.from('history').select('video_id, videos(id, title)').eq('user_id', currentUser.id).limit(10).order('created_at', {ascending: false});
+    if (hist) {
+        document.getElementById('favorites-list').innerHTML = hist.map(h => h.videos ? `
+            <div class="nav-link" onclick="playVideo('${h.videos.id}', '${h.videos.title.replace(/'/g, "\\'")}', '')">
+                <i class="fa-solid fa-clock-rotate-left"></i> ${h.videos.title}
             </div>` : '').join('');
     }
 }
