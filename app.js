@@ -140,7 +140,9 @@ function preparePlay(encodedData) {
     try {
         const data = JSON.parse(decodeURIComponent(atob(encodedData)));
         playVideo(data);
-    } catch (e) { console.error("Error:", e); }
+    } catch (e) { 
+        console.error("Error decoding video data:", e); 
+    }
 }
 
 function playVideo(data) {
@@ -151,8 +153,8 @@ function playVideo(data) {
 
     playerWin.style.display = 'flex'; 
 
-    // הגדרת פרמטרים אופטימליים למהירות בנטפרי וביצועים
-    const params = new URLSearchParams({
+    // הגדרה אחת ויחידה של params
+    const videoParams = new URLSearchParams({
         autoplay: 1,
         enablejsapi: 1,
         rel: 0,
@@ -164,46 +166,41 @@ function playVideo(data) {
         widget_referrer: 'https://www.youtube.com'
     });
 
-    // הזרקת הנגן (שימוש ב-nocookie לטעינה מהירה)
+    // הזרקת ה-iframe
     container.innerHTML = `
         <iframe id="yt-iframe" 
-                src="https://www.youtube-nocookie.com/embed/${data.id}?${params.toString()}" 
+                src="https://www.youtube-nocookie.com/embed/${data.id}?${videoParams.toString()}" 
                 frameborder="0" 
                 allow="autoplay; encrypted-media; picture-in-picture" 
                 allowfullscreen>
         </iframe>`;
     
-    // --- עדכון הבר התחתון עם נתוני הטקסט והסטטיסטיקה ---
-    
-    // כותרת, ערוץ וקטגוריה
-    document.getElementById('current-title').textContent = data.t;
-    document.getElementById('current-channel').textContent = data.c;
+    // עדכון טקסטים בבר התחתון
+    document.getElementById('current-title').textContent = data.t || "";
+    document.getElementById('current-channel').textContent = data.c || "";
     
     const catElem = document.getElementById('current-category');
-    if (catElem) catElem.textContent = data.cat;
+    if (catElem) catElem.textContent = data.cat || "כללי";
     
-    // אורך הסרטון
     const durationElem = document.getElementById('video-duration');
-    if (durationElem) durationElem.textContent = data.d;
+    if (durationElem) durationElem.textContent = data.d || "00:00";
     
-    // סטטיסטיקות (צפיות, לייקים, דירוג)
-    const viewsElem = document.getElementById('stat-views');
-    if (viewsElem) viewsElem.innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v}`;
+    if (document.getElementById('stat-views')) 
+        document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v}`;
     
-    const likesElem = document.getElementById('stat-likes');
-    if (likesElem) likesElem.innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l}`;
+    if (document.getElementById('stat-likes')) 
+        document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l}`;
     
-    const ratingElem = document.getElementById('stat-rating');
-    if (ratingElem) ratingElem.innerHTML = `<i class="fa-solid fa-star" style="color: gold;"></i> ${data.r}`;
+    if (document.getElementById('stat-rating')) 
+        document.getElementById('stat-rating').innerHTML = `<i class="fa-solid fa-star" style="color: gold;"></i> ${data.r}`;
     
-    // תיאור מקוצר (100 תווים ראשונים)
     const descElem = document.getElementById('bottom-description');
     if (descElem && data.desc) {
         descElem.textContent = data.desc.substring(0, 100) + "...";
     }
 
-    // שמירת היסטוריה ב-Supabase
-    if (typeof currentUser !== 'undefined' && currentUser) {
+    // היסטוריה
+    if (currentUser) {
         client.from('history').upsert([
             { user_id: currentUser.id, video_id: data.id, created_at: new Date() }
         ]).then(() => {
@@ -211,13 +208,9 @@ function playVideo(data) {
         });
     }
 
-    // עדכון מצב נגינה
     isPlaying = true;
-    if (typeof updatePlayStatus === 'function') {
-        updatePlayStatus(true);
-    }
+    updatePlayStatus(true);
 }
-
 function initDraggable() {
     const player = document.getElementById('floating-player');
     const handle = document.getElementById('drag-handle');
