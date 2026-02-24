@@ -103,21 +103,27 @@ function renderVideoGrid(data, append = false) {
     
     const html = data.map(v => {
         const isFav = userFavorites.includes(v.id);
+        const catName = categoryMap[v.category_id] || "כללי";
         
-        // יצירת אובייקט נתונים ואריזתו ב-Base64 חסין לשגיאות Syntax
-        const videoData = {
+        // יצירת אובייקט עם כל הנתונים שביקשת להציג בבר
+        const vInfo = {
             id: v.id,
-            title: v.title,
-            channel: v.channel_title
+            t: v.title,
+            c: v.channel_title,
+            cat: catName,
+            d: v.duration || "00:00",
+            v: v.views ? v.views.toLocaleString() : "0",
+            l: v.likes ? v.likes.toLocaleString() : "0",
+            r: v.user_rating_avg ? v.user_rating_avg.toFixed(1) : "0",
+            desc: v.description || ""
         };
-        // מקודדים ל-UTF8 ואז ל-Base64 כדי לתמוך בעברית וגרשים
-        const safeData = btoa(unescape(encodeURIComponent(JSON.stringify(videoData))));
+        const safeData = btoa(encodeURIComponent(JSON.stringify(vInfo)));
 
         return `
             <div class="v-card" onclick="preparePlay('${safeData}')">
                 <div class="card-img-container">
                     <img src="${v.thumbnail}" loading="lazy">
-                    <div class="video-description-overlay">${escapeHtml(v.description)}</div>
+                    <span class="duration-badge">${v.duration || ''}</span>
                 </div>
                 <h3>${escapeHtml(v.title)}</h3>
                 <div class="card-footer">
@@ -132,30 +138,34 @@ function renderVideoGrid(data, append = false) {
 }
 function preparePlay(encodedData) {
     try {
-        const decodedData = JSON.parse(decodeURIComponent(atob(encodedData)));
-        playVideo(decodedData.id, decodedData.title, decodedData.channel);
-    } catch (e) {
-        console.error("שגיאה בפענוח נתוני סרטון:", e);
-    }
+        const data = JSON.parse(decodeURIComponent(atob(encodedData)));
+        playVideo(data);
+    } catch (e) { console.error("Error:", e); }
 }
-// --- נגן וגרירה ---
 
-
-
-function playVideo(id, title, channel) {
+function playVideo(data) {
     const playerWin = document.getElementById('floating-player');
     const container = document.getElementById('youtubePlayer');
-    
-    if (!playerWin || !container) return;
-
     playerWin.style.display = 'flex'; 
+
+    const params = new URLSearchParams({
+        autoplay: 1, enablejsapi: 1, rel: 0, iv_load_policy: 3, origin: window.location.origin
+    });
+
+    container.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${data.id}?${params.toString()}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
     
-    /* הסבר על הפרמטרים למהירות בנטפרי:
-       1. youtube-nocookie.com: מונע מראש טעינה של הרבה סקריפטים של מעקב ופרסומות.
-       2. iv_load_policy=3: מבטל את ה-Annotations (הסיבה העיקרית לעיכוב בסינון).
-       3. disablekb=1: מונע טעינת סקריפט לשליטה במקלדת (חוסך עוד בקשת רשת).
-       4. widget_referrer: עוזר ליוטיוב לדלג על בדיקות CORS מסוימות.
-    */
+    // עדכון הבר התחתון עם כל הנתונים החדשים
+    document.getElementById('current-title').textContent = data.t;
+    document.getElementById('current-channel').textContent = data.c;
+    document.getElementById('current-category').textContent = data.cat;
+    document.getElementById('video-duration').textContent = data.d;
+    
+    document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v}`;
+    document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l}`;
+    document.getElementById('stat-rating').innerHTML = `<i class="fa-solid fa-star" style="color: gold;"></i> ${data.r}`;
+    
+    // הצגת תיאור מקוצר (למשל 100 תווים ראשונים)
+    document.getElementById('bottom-description').textContent = data.desc.substring(0, 100) + "...";
     const params = new URLSearchParams({
         autoplay: 1,
         enablejsapi: 1,
@@ -186,6 +196,10 @@ function playVideo(id, title, channel) {
             { user_id: currentUser.id, video_id: id, created_at: new Date() }
         ]).then(() => loadSidebarLists());
     }
+    isPlaying = true;
+    updatePlayStatus(true);
+}
+
 
     isPlaying = true;
     if (typeof updatePlayStatus === 'function') updatePlayStatus(true);
