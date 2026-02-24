@@ -112,7 +112,25 @@ body {
     cursor: nwse-resize;
     z-index: 10;
 }
+.window-header {
+    display: flex;
+    justify-content: space-between; /* מציב את הגרירה בצד אחד וה-X בצד שני */
+    align-items: center;
+    padding: 0 10px;
+}
 
+.close-player-btn {
+    background: none;
+    border: none;
+    color: #b3b3b3;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.2s;
+}
+
+.close-player-btn:hover {
+    color: white;
+}
 /* Player Bar */
 .player-bar {
     grid-column: span 2; background: black; border-top: 1px solid #282828;
