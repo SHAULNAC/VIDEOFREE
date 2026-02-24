@@ -8,6 +8,21 @@
     --border-color: #282828;
 }
 
+/* עיצוב סמן הגלילה הראשי של האתר */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--black);
+}
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
 body {
     margin: 0; 
     font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -15,7 +30,7 @@ body {
     color: var(--text-white);
     display: grid; 
     grid-template-columns: 260px 1fr;
-    grid-template-rows: 1fr 75px; /* גובה מעודכן לסרגל */
+    grid-template-rows: 1fr 75px; 
     height: 100vh;
     overflow: hidden;
 }
@@ -25,7 +40,6 @@ body {
 .nav-card { background: var(--dark-grey); border-radius: 8px; padding: 15px; }
 .nav-link { padding: 10px; cursor: pointer; color: var(--text-dim); display: flex; align-items: center; gap: 12px; font-weight: bold; font-size: 13px; transition: 0.2s; }
 .nav-link:hover { color: white; }
-.sidebar-list { margin-top: 10px; max-height: 200px; overflow-y: auto; }
 
 /* Content Area */
 .content { background: linear-gradient(to bottom, #222, var(--black)); overflow-y: auto; padding: 20px; }
@@ -52,14 +66,15 @@ body {
 /* תצוגת הזמן על הקוביה */
 .duration-badge {
     position: absolute;
-    bottom: 5px;
-    left: 5px;
-    background: rgba(0, 0, 0, 0.8);
+    bottom: 6px;
+    left: 6px;
+    background: rgba(0, 0, 0, 0.85);
     color: white;
     padding: 2px 6px;
     font-size: 11px;
     border-radius: 4px;
     font-weight: bold;
+    z-index: 2;
 }
 
 .v-card h3 {
@@ -80,7 +95,6 @@ body {
 .window-header { height: 35px; background: #181818; cursor: move; display: flex; justify-content: center; align-items: center; color: #b3b3b3; font-size: 12px; }
 #youtubePlayer { width: 100%; flex-grow: 1; position: relative; }
 #yt-iframe { width: 100% !important; height: 100% !important; border: none; display: block; }
-
 .resizer { width: 15px; height: 15px; position: absolute; right: 0; bottom: 0; cursor: nwse-resize; z-index: 10000; }
 
 /* --- Spotify Style Player Bar --- */
@@ -96,56 +110,55 @@ body {
     justify-content: space-between;
 }
 
-/* חלק ימני: מידע בסיסי */
 .now-playing {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     width: 25%;
-    overflow: hidden;
 }
 
 #current-title {
-    font-weight: bold;
-    font-size: 14px;
-    color: white;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: bold; font-size: 14px; color: white; margin: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 .video-meta-sub {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 2px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    font-size: 11px; color: var(--text-dim); margin-top: 3px;
+    display: flex; align-items: center; gap: 8px;
 }
 
-/* פס מפריד בין נתונים */
-.meta-sep { color: #444; }
+/* פס מפריד אנכי דק */
+.meta-sep {
+    width: 1px; height: 10px; background: #333;
+}
 
-/* חלק מרכזי: תיאור */
+/* חלק מרכזי: תיאור עם גלילה */
 .player-center {
     flex-grow: 1;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0 40px;
+    padding: 0 30px;
     max-width: 50%;
+    height: 100%;
 }
 
 .bottom-desc {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-dim);
     text-align: center;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    max-height: 50px;
+    overflow-y: auto;
     line-height: 1.4;
+    padding: 0 5px;
+}
+
+/* עיצוב סמן גלילה פנימי לתיאור */
+.bottom-desc::-webkit-scrollbar {
+    width: 4px;
+}
+.bottom-desc::-webkit-scrollbar-thumb {
+    background: #282828;
+    border-radius: 10px;
 }
 
 /* חלק שמאלי: קטגוריה */
@@ -154,15 +167,12 @@ body {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    font-size: 12px;
     color: var(--spotify-green);
     font-weight: bold;
-    letter-spacing: 0.5px;
+    font-size: 12px;
 }
 
 .hidden-player { display: none !important; }
 .show-player { display: flex !important; }
 
-/* Buttons & Icons */
-.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: 0.2s; }
-.fav-btn:hover { color: white; transform: scale(1.1); }
+.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; }
