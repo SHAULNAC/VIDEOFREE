@@ -203,3 +203,64 @@ body {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     max-width: 400px; margin-top: 5px;
 }
+.floating-window {
+    position: fixed;
+    bottom: 110px;
+    left: 20px;
+    width: 350px;
+    min-width: 200px;
+    min-height: 150px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    z-index: 9999;
+    display: none;
+    border: 1px solid #333;
+}
+
+/* ידית שינוי גודל בפינה הימנית העליונה (בגלל RTL) או השמאלית */
+.resizer {
+    width: 15px;
+    height: 15px;
+    background: transparent;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+    z-index: 10;
+}
+
+.window-header {
+    height: 30px;
+    background: #181818;
+    cursor: move;
+    display: flex;
+    justify-content: center;
+    color: #b3b3b3;
+}
+
+.player-bar {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    align-items: center;
+}
+
+.main-play-btn {
+    background: white;
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    cursor: pointer;
+    margin-bottom: 5px;
+}
+
+.bottom-desc {
+    font-size: 11px;
+    color: #b3b3b3;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
