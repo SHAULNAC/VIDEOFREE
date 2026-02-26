@@ -206,13 +206,13 @@ function preparePlay(encodedData) {
             origin: window.location.origin
         });
 
-        // 4. הזרקת המבנה המלא: Loader + IFrame עם מנגנון השמדה עצמית ל-Loader
+        // 4. הזרקת המבנה המלא: Loader + IFrame (שינוי לשרת youtube.com הרגיל)
         container.innerHTML = `
             <div id="player-loader" class="player-loader">
                 <i class="fa-solid fa-play"></i>
                 </div>
             <iframe id="yt-iframe" 
-                src="https://www.youtube-nocookie.com/embed/${data.id}?${videoParams.toString()}" 
+                src="https://www.youtube.com/embed/${data.id}?${videoParams.toString()}" 
                 frameborder="0" 
                 allow="autoplay; encrypted-media; picture-in-picture" 
                 allowfullscreen
