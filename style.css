@@ -8,18 +8,17 @@
     --text-dim: #b3b3b3;
     --border-color: #282828;
 }
-
-/* הגדרה גורפת */
+/* הגדרה גורפת לכל האתר */
 *, body, button, input, select, textarea {
-    font-family: 'Rubik', sans-serif;
-    box-sizing: border-box;
+    font-family: 'Rubik', sans-serif; /* או Heebo */
 }
 
-/* תיקון פונט אייקונים */
+/* החזרת הגופן המקורי לאייקונים - זה יפתור את הריבועים */
 .fa, .fas, .far, .fal, .fab, .fa-solid, .fa-regular, .fa-brands {
-    font-family: "Font Awesome 6 Free" !important;
+    font-family: "Font Awesome 6 Free" !important; /* שם הפונט של הספרייה */
     font-weight: 900; 
 }
+
 
 body {
     margin: 0; 
@@ -32,10 +31,11 @@ body {
     overflow: hidden;
 }
 
-/* --- Scrollbar --- */
+/* --- Scrollbar Styling --- */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: var(--black); }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
 
 /* --- Sidebar --- */
 .sidebar { 
@@ -46,74 +46,107 @@ body {
     overflow-y: auto; 
     background-color: var(--black);
 }
+
 .nav-card { background: var(--dark-grey); border-radius: 8px; padding: 15px; }
+
 .nav-link { 
-    padding: 10px; cursor: pointer; color: var(--text-dim); 
-    display: flex; align-items: center; gap: 12px; 
-    font-weight: bold; font-size: 13px; transition: 0.2s; 
+    padding: 10px; 
+    cursor: pointer; 
+    color: var(--text-dim); 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    font-weight: bold; 
+    font-size: 13px; 
+    transition: 0.2s; 
 }
+
 .nav-link:hover, .nav-link.active { color: white; }
 
-/* --- Main Content --- */
+.settings-card { margin-top: auto; margin-bottom: 10px; }
+.settings-card .nav-link { font-size: 12px; }
+
+/* --- Main Content Area --- */
 .content { 
     background: linear-gradient(to bottom, #222, var(--black)); 
-    overflow-y: auto; padding: 20px; 
+    overflow-y: auto; 
+    padding: 20px; 
 }
+
 .search-bar { 
-    background: white; border-radius: 50px; padding: 8px 20px; 
-    display: flex; align-items: center; width: 300px; margin-bottom: 20px; 
+    background: white; 
+    border-radius: 50px; 
+    padding: 8px 20px; 
+    display: flex; 
+    align-items: center; 
+    width: 300px; 
+    margin-bottom: 20px; 
 }
-.search-bar input { border: none; outline: none; width: 100%; color: #000; }
+
+.search-bar input { 
+    border: none; 
+    outline: none; 
+    width: 100%; 
+    margin-right: 10px; 
+    color: #000; 
+    font-size: 14px; 
+}
 
 /* --- Video Grid & Cards --- */
 #videoGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 20px;
     width: 100%;
 }
 
 .v-card {
     background: var(--light-grey); 
-    padding: 12px; border-radius: 12px; cursor: pointer;
-    display: flex; flex-direction: column; transition: 0.3s;
+    padding: 12px; 
+    border-radius: 8px; 
+    cursor: pointer;
+    display: flex; 
+    flex-direction: column; 
+    height: 100%; 
+    position: relative; 
+    transition: 0.3s;
 }
+
 .v-card:hover { background: #282828; }
 
-.v-thumb { 
-    position: relative; width: 100%; aspect-ratio: 16/9; 
-    border-radius: 8px; overflow: hidden; background: #000; 
+.card-img-container { 
+    position: relative; 
+    width: 100%; 
+    aspect-ratio: 16/9; 
+    border-radius: 4px; 
+    overflow: hidden; 
 }
-.v-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-/* מיקום הזמן על התמונה - כמו בגרסה 12 */
-.v-duration {
-    position: absolute; bottom: 8px; right: 8px;
+.v-card img { width: 100%; height: 100%; object-fit: cover; }
+
+.duration-badge {
+    position: absolute; bottom: 6px; left: 6px;
     background: rgba(0, 0, 0, 0.85); color: white;
     padding: 2px 6px; font-size: 11px; border-radius: 4px;
     font-weight: bold; z-index: 2;
 }
 
-.v-info h3 {
-    font-size: 14px; margin: 12px 0 6px 0; line-height: 1.4;
+.v-card h3 {
+    font-size: 13px; margin: 10px 0 5px 0; height: 2.6em; line-height: 1.3;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.v-info p { font-size: 12px; color: var(--text-dim); margin: 0; }
 
-/* שורה תחתונה בכרטיסייה - מיקום הלב */
 .card-footer { 
-    margin-top: 12px; display: flex; justify-content: space-between; 
-    align-items: center; font-size: 11px; color: var(--text-dim); 
+    margin-top: auto; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    font-size: 11px; 
+    color: var(--text-dim); 
 }
 
-.fav-btn { 
-    background: none; border: none; color: var(--text-dim); 
-    cursor: pointer; font-size: 16px; transition: 0.2s; padding: 0;
-}
-.fav-btn:hover { transform: scale(1.2); }
-
-/* צבע לב מלא כשזה מועדף */
-.fa-solid.fa-heart { color: var(--spotify-green); }
+.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: 0.2s; }
+.fav-btn:hover { color: var(--spotify-green); transform: scale(1.2); }
 
 /* --- Floating Player --- */
 .floating-window {
@@ -122,20 +155,106 @@ body {
     box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 9999; 
     display: none; border: 1px solid #333; flex-direction: column;
 }
-.window-header { height: 35px; background: #181818; cursor: move; display: flex; justify-content: center; align-items: center; color: #b3b3b3; font-size: 12px; }
-#youtubePlayer { width: 100%; flex-grow: 1; position: relative; }
-#yt-iframe { width: 100%; height: 100%; border: none; }
 
-/* --- Player Bar --- */
+.window-header { 
+    height: 35px; background: #181818; cursor: move; 
+    display: flex; justify-content: center; align-items: center; 
+    color: #b3b3b3; font-size: 12px; position: relative;
+}
+
+#youtubePlayer { 
+    width: 100%; flex-grow: 1; position: relative; background: #000; 
+}
+
+#yt-iframe { 
+    width: 100%; height: 100%; border: none; display: block; 
+    position: absolute; top: 0; left: 0; z-index: 5;
+}
+
+.resizer { 
+    width: 15px; height: 15px; position: absolute; 
+    right: 0; bottom: 0; cursor: nwse-resize; z-index: 10000; 
+}
+
+/* --- Player Bar (Bottom) --- */
 .player-bar {
-    grid-column: span 2; background: #000; border-top: 1px solid var(--border-color);
+    grid-column: span 2; background: #000; 
+    border-top: 1px solid var(--border-color);
     display: flex; align-items: center; padding: 0 25px; height: 75px;
     z-index: 10000; justify-content: space-between;
 }
-.now-playing { width: 25%; overflow: hidden; }
-#current-title { font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.video-meta-sub { font-size: 11px; color: var(--text-dim); }
+
+.now-playing { width: 25%; display: flex; flex-direction: column; }
+#current-title { font-weight: bold; font-size: 14px; color: white; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video-meta-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; display: flex; align-items: center; gap: 8px; }
+.meta-sep { width: 1px; height: 10px; background: #333; }
+
+.player-center { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 0 30px; max-width: 50%; height: 100%; }
+.bottom-desc { font-size: 11.5px; color: var(--text-dim); text-align: center; max-height: 50px; overflow-y: auto; line-height: 1.4; padding: 0 5px; }
+
+.player-right { width: 20%; display: flex; justify-content: flex-end; align-items: center; color: var(--spotify-green); font-weight: bold; font-size: 12px; }
+
+/* --- Animations & Loaders --- */
+.player-loader {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--spotify-green); font-size: 40px;
+    display: flex; flex-direction: column; align-items: center;
+    z-index: 1; animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+    from { opacity: 0.2; transform: translate(-50%, -50%) scale(0.9); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* Skeleton Loading Effect */
+.skeleton-card {
+    background: var(--light-grey); border-radius: 8px; height: 200px; width: 100%;
+    position: relative; overflow: hidden;
+}
+.skeleton-card::after {
+    content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    animation: skeleton-shift 1.5s infinite;
+}
+@keyframes skeleton-shift {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+
+/* --- Modals --- */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center;
+    z-index: 20000;
+}
+
+.modal-content {
+    background: #282828; color: white; width: 90%; max-width: 500px;
+    border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header { padding: 20px; border-bottom: 1px solid #3e3e3e; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { margin: 0; font-size: 18px; color: var(--spotify-green); }
+.close-modal-btn { background: none; border: none; color: #b3b3b3; font-size: 28px; cursor: pointer; }
+.modal-body { padding: 20px; font-size: 14px; line-height: 1.6; color: #b3b3b3; }
+.modal-footer { padding: 15px 20px; background: #181818; text-align: left; }
+.modal-confirm-btn { background-color: var(--spotify-green); color: black; border: none; padding: 10px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; }
 
 /* --- Helpers --- */
 .hidden-player { display: none !important; }
 .show-player { display: flex !important; }
+
+.assistant-<uniquifier> {
+  font-family: "Assistant", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: <weight>;
+  font-style: normal;
+}
