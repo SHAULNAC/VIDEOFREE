@@ -151,7 +151,7 @@ function renderVideoGrid(videos) {
         const title = escapeHtml(v.title);
         const channel = escapeHtml(v.channel_title);
         
-        // שימוש ב-thumbnail כפי שמופיע ב-Supabase
+        // שימוש ב-thumbnail כפי שמופיע ב-Supabase 
         const thumbUrl = v.thumbnail; 
 
         const videoData = {
@@ -165,15 +165,18 @@ function renderVideoGrid(videos) {
         };
         const encodedData = btoa(encodeURIComponent(JSON.stringify(videoData)));
 
-        // לוגיקת לב: מלא לסרטון מועדף, ריק לאחרים
+        // לוגיקת לב: בדיקה האם הסרטון נמצא ברשימת המועדפים של המשתמש 
         const isFav = userFavorites.includes(videoId);
         const favIconClass = isFav ? 'fa-solid' : 'fa-regular';
+
+        // עיבוד פורמט הזמן (משתמש בפונקציית העזר formatDuration) 
+        const displayDuration = v.duration ? formatDuration(v.duration) : '';
 
         return `
             <div class="v-card" onclick="preparePlay('${encodedData}')">
                 <div class="v-thumb">
                     <img src="${thumbUrl}" alt="${title}" loading="lazy">
-                    <span class="v-duration">${v.duration || ''}</span>
+                    <span class="v-duration">${displayDuration}</span>
                 </div>
                 <div class="v-info">
                     <h3 title="${title}">${title}</h3>
