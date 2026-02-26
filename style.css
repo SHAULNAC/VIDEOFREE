@@ -9,9 +9,16 @@
     --border-color: #282828;
 }
 
+/* הגדרה גורפת לכל האתר */
 *, body, button, input, select, textarea {
     font-family: 'Rubik', sans-serif;
     box-sizing: border-box;
+}
+
+/* החזרת הגופן המקורי לאייקונים */
+.fa, .fas, .far, .fal, .fab, .fa-solid, .fa-regular, .fa-brands {
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900; 
 }
 
 body {
@@ -25,6 +32,12 @@ body {
     overflow: hidden;
 }
 
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--black); }
+::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #888; }
+
 /* --- Sidebar --- */
 .sidebar { 
     padding: 10px; 
@@ -36,169 +49,159 @@ body {
 }
 
 .nav-card { background: var(--dark-grey); border-radius: 8px; padding: 15px; }
-
 .nav-link { 
-    padding: 10px; 
+    padding: 12px; 
     cursor: pointer; 
     color: var(--text-dim); 
     display: flex; 
     align-items: center; 
-    gap: 12px; 
+    gap: 15px; 
     font-weight: bold; 
-    font-size: 13px; 
+    font-size: 14px; 
     transition: 0.2s; 
 }
-
 .nav-link:hover, .nav-link.active { color: white; }
+.nav-link i { font-size: 20px; }
+
+.user-item { margin-bottom: 10px; }
+.btn-login { 
+    background: white; color: black; border: none; padding: 10px 20px; 
+    border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%;
+}
+.user-info { display: flex; align-items: center; gap: 10px; }
+.user-info img { width: 32px; height: 32px; border-radius: 50%; }
 
 /* --- Main Content --- */
 .content { 
     background: linear-gradient(to bottom, #222, var(--black)); 
     overflow-y: auto; 
-    padding: 20px; 
+    padding: 24px; 
+    border-radius: 8px;
+    margin-top: 10px;
+    margin-left: 10px;
 }
 
+.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .search-bar { 
-    background: white; 
-    border-radius: 50px; 
-    padding: 8px 20px; 
-    display: flex; 
-    align-items: center; 
-    width: 300px; 
-    margin-bottom: 20px; 
+    background: #242424; border-radius: 50px; padding: 8px 15px; 
+    display: flex; align-items: center; width: 350px; border: 1px solid transparent;
 }
-
+.search-bar:focus-within { border-color: #555; }
 .search-bar input { 
-    border: none; 
-    outline: none; 
-    width: 100%; 
-    margin-right: 10px; 
-    color: #000; 
+    background: transparent; border: none; outline: none; color: white; 
+    width: 100%; margin-right: 10px; font-size: 14px;
 }
+.search-bar i { color: var(--text-dim); }
 
-/* --- Video Grid & Cards --- */
+/* --- Video Grid --- */
 #videoGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
 }
 
 .v-card {
-    background: var(--light-grey); 
-    padding: 15px; 
+    background: #181818; 
+    padding: 16px; 
     border-radius: 8px; 
     cursor: pointer;
-    transition: 0.3s;
+    transition: background 0.3s ease;
+    position: relative;
 }
-
 .v-card:hover { background: #282828; }
 
-/* תיקון תצוגת הזמן על הסרטון */
-.v-thumb {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16/9;
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.v-thumb img { 
+/* תיקון מיקום הזמן על הסרטון */
+.v-thumb { 
+    position: relative; 
     width: 100%; 
-    height: 100%; 
-    object-fit: cover; 
+    aspect-ratio: 16/9; 
+    border-radius: 4px; 
+    overflow: hidden; 
+    margin-bottom: 12px;
 }
+.v-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .v-duration {
     position: absolute;
     bottom: 8px;
-    left: 8px; /* מיקום תקין ב-RTL */
+    left: 8px; /* הצמדה לצד שמאל ב-RTL */
     background: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 2px 6px;
-    font-size: 11px;
+    padding: 2px 5px;
     border-radius: 4px;
-    font-weight: bold;
+    font-size: 11px;
+    font-weight: 500;
     z-index: 2;
 }
 
-.v-info h3 {
-    font-size: 14px;
-    margin: 12px 0 5px 0;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+.v-info h3 { 
+    font-size: 15px; margin: 0 0 8px 0; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
 }
+.v-info p { font-size: 13px; color: var(--text-dim); margin: 0; }
 
 .card-footer { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-top: 10px;
-    color: var(--text-dim);
-    font-size: 12px;
+    display: flex; justify-content: space-between; align-items: center; margin-top: 12px; 
 }
+.card-footer span { font-size: 12px; color: var(--text-dim); }
 
-.fav-btn { 
-    background: none; 
-    border: none; 
-    color: var(--text-dim); 
-    cursor: pointer; 
-    font-size: 16px; 
-    transition: 0.2s; 
-}
-
-/* צבע הלב כשהוא מלא (fa-solid) */
-.fav-btn .fa-solid.fa-heart {
-    color: var(--spotify-green);
-}
+/* עיצוב הלבבות */
+.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: 0.2s; }
+.fav-btn:hover { transform: scale(1.1); color: white; }
+.fav-btn .fa-solid.fa-heart { color: var(--spotify-green); } /* לב מלא בירוק */
 
 /* --- Player Bar (Bottom) --- */
-/* שליטה בהצגה/הסתרה של הסרגל */
 .player-bar {
     grid-column: span 2; 
     background: #000; 
     border-top: 1px solid var(--border-color);
-    display: none; /* מוסתר כברירת מחדל */
+    display: none; /* הסרגל מוסתר כברירת מחדל */
     align-items: center; 
-    padding: 0 25px; 
-    height: 75px;
+    justify-content: space-between;
+    padding: 0 20px;
     z-index: 10000;
 }
 
-.player-bar.show-player {
-    display: flex !important; /* מוצג רק כשיש את הקלאס המתאים */
+/* הצגת הסרגל רק בזמן ניגון (מופעל ע"י JS) */
+.player-bar.active-player {
+    display: flex !important;
 }
 
-.now-playing { width: 30%; }
-#current-title { font-weight: bold; font-size: 14px; margin: 0; }
-.video-meta-sub { font-size: 11px; color: var(--text-dim); display: flex; gap: 10px; }
+.now-playing { display: flex; align-items: center; gap: 15px; width: 30%; }
+.now-playing img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; }
+.video-meta h4 { font-size: 14px; margin: 0 0 4px 0; }
+.video-meta p { font-size: 11px; color: var(--text-dim); margin: 0; }
 
-/* --- Floating Player --- */
+.player-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.bottom-desc { font-size: 12px; color: var(--text-dim); text-align: center; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- Floating Player Window --- */
 .floating-window {
-    position: fixed; 
-    bottom: 90px; 
-    left: 20px; 
-    width: 350px; 
-    aspect-ratio: 16/10;
-    background: #000; 
-    border-radius: 12px; 
-    overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8); 
-    z-index: 9999; 
-    display: none; 
-    border: 1px solid #333;
-    flex-direction: column;
+    position: fixed; bottom: 90px; left: 20px; width: 380px; 
+    background: #000; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 9999; 
+    display: none; border: 1px solid #333; flex-direction: column;
 }
 
 .window-header { 
-    height: 35px; 
-    background: #181818; 
-    cursor: move; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center;
-    color: var(--text-dim);
-    font-size: 12px;
+    height: 38px; background: #181818; cursor: move; 
+    display: flex; align-items: center; justify-content: space-between; padding: 0 15px;
 }
+.close-player { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+.video-container { width: 100%; aspect-ratio: 16/9; background: #000; }
+.video-container iframe { width: 100%; height: 100%; border: none; }
+
+/* --- Modals --- */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center;
+    z-index: 20000;
+}
+.modal-content {
+    background: #282828; color: white; width: 90%; max-width: 500px;
+    border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modal-header { padding: 20px; border-bottom: 1px solid #3e3e3e; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { margin: 0; font-size: 18px; color: var(--spotify-green); }
+.close-modal-btn { background: none; border: none; color: #b3b3b3; font-size: 28px; cursor: pointer; }
+.modal-body { padding: 20px; font-size: 14px; line-height: 1.6; max-height: 60vh; overflow-y: auto; }
