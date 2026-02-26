@@ -141,6 +141,7 @@ async function getTranslation(text) {
 
 // --- רינדור ---
 
+// חפש את פונקציית renderVideoGrid והחלף אותה בגרסה הזו:
 function renderVideoGrid(videos) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
@@ -150,7 +151,9 @@ function renderVideoGrid(videos) {
         const title = escapeHtml(v.title);
         const channel = escapeHtml(v.channel_title);
         
-        // יצירת אובייקט נתונים עבור ה-Base64
+        // שימוש ב-thumbnail כפי שמופיע ב-Supabase
+        const thumbUrl = v.thumbnail; 
+
         const videoData = {
             id: videoId,
             t: v.title,
@@ -162,23 +165,25 @@ function renderVideoGrid(videos) {
         };
         const encodedData = btoa(encodeURIComponent(JSON.stringify(videoData)));
 
-        // בדיקה האם הסרטון נמצא במועדפים
+        // לוגיקת לב: מלא לסרטון מועדף, ריק לאחרים
         const isFav = userFavorites.includes(videoId);
-        // אם הוא במועדפים - לב מלא (fa-solid), אם לא - לב ריק (fa-regular)
         const favIconClass = isFav ? 'fa-solid' : 'fa-regular';
 
         return `
             <div class="v-card" onclick="preparePlay('${encodedData}')">
                 <div class="v-thumb">
-                    <img src="${v.thumbnail}" alt="${title}" loading="lazy">
+                    <img src="${thumbUrl}" alt="${title}" loading="lazy">
                     <span class="v-duration">${v.duration || ''}</span>
-                    <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${videoId}')">
-                        <i class="${favIconClass} fa-heart" id="fav-icon-${videoId}"></i>
-                    </button>
                 </div>
                 <div class="v-info">
                     <h3 title="${title}">${title}</h3>
                     <p>${channel}</p>
+                    <div class="card-footer">
+                        <span><i class="fa-solid fa-eye"></i> ${v.views_count || 0}</span>
+                        <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${videoId}')">
+                            <i class="${favIconClass} fa-heart" id="fav-icon-${videoId}"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
