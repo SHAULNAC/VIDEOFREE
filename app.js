@@ -195,20 +195,11 @@ function preparePlay(encodedData) {
         
         if (!playerWin || !container) return;
 
-        // 2. הצגת חלון הנגן עם הנפשה
+        // 2. הצגת חלון הנגן והסרגל התחתון
         playerWin.style.display = 'flex'; 
-        playerWin.style.opacity = '0';
-        playerWin.style.transform = 'translateY(20px)';
-        playerWin.style.transition = 'all 0.5s ease-out';
-        
-        setTimeout(() => {
-            playerWin.style.opacity = '1';
-            playerWin.style.transform = 'translateY(0)';
-        }, 10);
-
         if (playerBar) {
             playerBar.classList.remove('hidden-player');
-            playerBar.classList.add('show-player'); // מחלקה שתפעיל את האנימציה מה-CSS
+            playerBar.classList.add('show-player');
         }
 
         // 3. בניית כתובת ה-URL של יוטיוב
@@ -216,11 +207,10 @@ function preparePlay(encodedData) {
             autoplay: 1,
             enablejsapi: 1,
             rel: 0,
-            cc_load_policy: 1, // כתוביות
             origin: window.location.origin
         });
 
-        // 4. הזרקת המבנה המלא: Loader + IFrame (שרת embed רגיל)
+        // 4. הזרקת המבנה המלא: Loader + IFrame (שינוי לשרת youtube.com הרגיל)
         container.innerHTML = `
             <div id="player-loader" class="player-loader">
                 <i class="fa-solid fa-play"></i>
@@ -253,7 +243,7 @@ function preparePlay(encodedData) {
         const descElem = document.getElementById('bottom-description');
         if (descElem) descElem.textContent = data.desc || "";
 
-        // 6. עדכון להיסטוריה ב-Supabase
+        // 6. עדכון להיסטוריה ב-Supabase (אם מחובר)
         if (typeof currentUser !== 'undefined' && currentUser) {
             client.from('history').upsert([
                 { user_id: currentUser.id, video_id: data.id, created_at: new Date() }
