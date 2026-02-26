@@ -9,14 +9,13 @@
     --border-color: #282828;
 }
 
-/* הגדרה גורפת לכל האתר */
 *, body, button, input, select, textarea {
-    font-family: 'Rubik', sans-serif; /* או Heebo */
+    font-family: 'Rubik', sans-serif;
+    box-sizing: border-box; /* מבטיח שהפדינג לא ינפח אלמנטים */
 }
 
-/* החזרת הגופן המקורי לאייקונים - זה יפתור את הריבועים */
 .fa, .fas, .far, .fal, .fab, .fa-solid, .fa-regular, .fa-brands {
-    font-family: "Font Awesome 6 Free" !important; /* שם הפונט של הספרייה */
+    font-family: "Font Awesome 6 Free" !important;
     font-weight: 900; 
 }
 
@@ -31,197 +30,97 @@ body {
     overflow: hidden;
 }
 
-/* --- Scrollbar Styling --- */
+/* --- Scrollbar --- */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: var(--black); }
-::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #888; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
 /* --- Sidebar --- */
-.sidebar { 
-    padding: 10px; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px; 
-    overflow-y: auto; 
-    background-color: var(--black);
-}
-
+.sidebar { padding: 10px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; background-color: var(--black); }
 .nav-card { background: var(--dark-grey); border-radius: 8px; padding: 15px; }
-
-.nav-link { 
-    padding: 12px; 
-    cursor: pointer; 
-    color: var(--text-dim); 
-    display: flex; 
-    align-items: center; 
-    gap: 15px; 
-    font-weight: bold; 
-    font-size: 14px; 
-    transition: 0.2s; 
-}
-
+.nav-link { padding: 10px; cursor: pointer; color: var(--text-dim); display: flex; align-items: center; gap: 12px; font-weight: bold; font-size: 13px; transition: 0.2s; }
 .nav-link:hover, .nav-link.active { color: white; }
-.nav-link i { font-size: 20px; }
+.nav-link i { font-size: 18px; }
 
-.user-item { margin-bottom: 10px; }
-.btn-login { 
-    background: white; color: black; border: none; padding: 10px 20px; 
-    border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%;
-}
+/* Library List */
+.sidebar-list { margin-top: 10px; }
+.sidebar-item { padding: 8px; cursor: pointer; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; gap: 10px; color: var(--text-dim); font-size: 13px; }
+.sidebar-item:hover { background: #282828; color: white; }
 
+.user-item { margin-bottom: 10px; border-bottom: 1px solid #282828; padding-bottom: 10px; }
+.btn-login { background: white; color: black; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%; font-size: 13px; }
 .user-info { display: flex; align-items: center; gap: 10px; }
 .user-info img { width: 32px; height: 32px; border-radius: 50%; }
 
 /* --- Main Content --- */
-.content { 
-    background: linear-gradient(to bottom, #222, var(--black)); 
-    overflow-y: auto; 
-    padding: 24px; 
-    border-radius: 8px;
-    margin-top: 10px;
-    margin-left: 10px;
-}
-
-.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-
-.search-bar { 
-    background: #242424; 
-    border-radius: 50px; 
-    padding: 8px 15px; 
-    display: flex; 
-    align-items: center; 
-    width: 350px; 
-    border: 1px solid transparent;
-}
-
-.search-bar:focus-within { border-color: #555; }
-
-.search-bar input { 
-    background: transparent; 
-    border: none; 
-    outline: none; 
-    color: white; 
-    width: 100%; 
-    margin-right: 10px; 
-    font-size: 14px; 
-}
-
+.content { background: linear-gradient(to bottom, #222, var(--black)); overflow-y: auto; padding: 20px; border-radius: 8px; margin: 10px 10px 0 0; position: relative; }
+.header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; z-index: 100; background: transparent; }
+.search-bar { background: #242424; border-radius: 50px; padding: 8px 15px; display: flex; align-items: center; width: 300px; }
+.search-bar input { background: transparent; border: none; outline: none; color: white; width: 100%; margin-right: 10px; font-size: 13px; }
 .search-bar i { color: var(--text-dim); }
 
 /* --- Video Grid --- */
-#videoGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 24px;
-}
-
-.v-card {
-    background: #181818; 
-    padding: 16px; 
-    border-radius: 8px; 
-    cursor: pointer;
-    transition: background 0.3s ease;
-    position: relative;
-}
-
+#videoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+.v-card { background: var(--light-grey); padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.3s; position: relative; }
 .v-card:hover { background: #282828; }
 
-/* תיקון כירורגי 1: מיקום ועיצוב משך הזמן */
-.v-thumb { 
-    position: relative; 
-    width: 100%; 
-    aspect-ratio: 16/9; 
-    border-radius: 4px; 
-    overflow: hidden; 
-    margin-bottom: 12px;
-}
+.v-thumb { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
 .v-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
+/* תיקון מיקום ופורמט הזמן */
 .v-duration {
     position: absolute;
-    bottom: 8px;
-    left: 8px;
+    bottom: 5px;
+    left: 5px;
     background: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
     z-index: 2;
 }
 
-.v-info h3 { 
-    font-size: 15px; margin: 0 0 8px 0; 
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-}
+.v-info h3 { font-size: 13px; margin: 0 0 5px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+.v-info p { font-size: 11px; color: var(--text-dim); margin: 0; }
 
-.v-info p { font-size: 13px; color: var(--text-dim); margin: 0; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.card-footer span { font-size: 11px; color: var(--text-dim); }
 
-.card-footer { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-top: 12px; 
-}
-
-.card-footer span { font-size: 12px; color: var(--text-dim); }
-
-/* תיקון כירורגי 2: לבבות - רק לב מלא מקבל צבע */
-.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: 0.2s; }
-.fav-btn:hover { transform: scale(1.1); color: white; }
-.fav-btn .fa-solid.fa-heart { color: var(--spotify-green); }
+/* תיקון לבבות: רק לב מלא צבוע */
+.fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; transition: 0.2s; }
+.fav-btn:hover { color: white; transform: scale(1.1); }
+.fav-btn i.fa-solid { color: var(--spotify-green); }
 
 /* --- Player Bar (Bottom) --- */
-/* תיקון כירורגי 3: הסתרת הסרגל כברירת מחדל */
 .player-bar {
     grid-column: span 2; 
     background: #000; 
     border-top: 1px solid var(--border-color);
-    display: none; /* שונה מ-flex ל-none */
+    display: none; /* מוצג רק בזמן ניגון דרך ה-JS */
     align-items: center; 
-    justify-content: space-between;
-    padding: 0 20px;
-    z-index: 10000;
+    padding: 0 15px;
+    z-index: 1000;
 }
 
-/* הוספת קלאס להצגת הסרגל (להוספה דרך JS בזמן הפעלה) */
-.player-bar.active-player {
-    display: flex !important;
+/* קלאס להפעלה דרך JS */
+.player-bar.active {
+    display: flex;
 }
 
-.now-playing { display: flex; align-items: center; gap: 15px; width: 30%; }
-.now-playing img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; }
+.now-playing { width: 30%; display: flex; align-items: center; gap: 12px; }
+.now-playing img { width: 45px; height: 45px; border-radius: 4px; object-fit: cover; }
+.video-meta h4 { font-size: 13px; margin: 0 0 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.video-meta p { font-size: 10px; color: var(--text-dim); margin: 0; }
 
-.video-meta h4 { font-size: 14px; margin: 0 0 4px 0; }
-.video-meta p { font-size: 11px; color: var(--text-dim); margin: 0; }
-
-.player-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.player-center { flex: 1; display: flex; justify-content: center; align-items: center; padding: 0 30px; max-width: 50%; height: 100%; }
 .bottom-desc { 
-    font-size: 12px; color: var(--text-dim); text-align: center; 
-    max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+    font-size: 11.5px; color: var(--text-dim); text-align: center; 
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; 
+    -webkit-box-orient: vertical; line-height: 1.4; 
 }
 
-.player-right { width: 30%; display: flex; justify-content: flex-end; }
-#current-category { font-size: 12px; color: var(--spotify-green); border: 1px solid var(--spotify-green); padding: 4px 12px; border-radius: 20px; }
-
-/* --- Floating Player Window --- */
-.floating-window {
-    position: fixed; bottom: 90px; left: 20px; width: 380px; 
-    background: #000; border-radius: 12px; overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 9999; 
-    display: none; border: 1px solid #333; flex-direction: column;
-}
-
-.window-header { 
-    height: 38px; background: #181818; cursor: move; 
-    display: flex; align-items: center; justify-content: space-between; padding: 0 15px;
-}
-
-.close-player { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-
-.video-container { width: 100%; aspect-ratio: 16/9; background: #000; }
-.video-container iframe { width: 100%; height: 100%; border: none; }
+.player-right { width: 20%; display: flex; justify-content: flex-end; align-items: center; color: var(--spotify-green); font-weight: bold; font-size: 12px; }
 
 /* --- Modals --- */
 .modal-overlay {
@@ -234,8 +133,9 @@ body {
     background: #282828; color: white; width: 90%; max-width: 500px;
     border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
-
 .modal-header { padding: 20px; border-bottom: 1px solid #3e3e3e; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h2 { margin: 0; font-size: 18px; color: var(--spotify-green); }
 .close-modal-btn { background: none; border: none; color: #b3b3b3; font-size: 28px; cursor: pointer; }
 .modal-body { padding: 20px; font-size: 14px; line-height: 1.6; max-height: 60vh; overflow-y: auto; }
+.modal-footer { padding: 15px 20px; border-top: 1px solid #3e3e3e; text-align: right; }
+.modal-btn { background: var(--spotify-green); color: black; border: none; padding: 10px 25px; border-radius: 20px; font-weight: bold; cursor: pointer; }
