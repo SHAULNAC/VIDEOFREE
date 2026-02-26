@@ -11,13 +11,12 @@
 
 /* הגדרה גורפת לכל האתר */
 *, body, button, input, select, textarea {
-    font-family: 'Rubik', sans-serif;
-    box-sizing: border-box;
+    font-family: 'Rubik', sans-serif; /* או Heebo */
 }
 
-/* החזרת הגופן המקורי לאייקונים */
+/* החזרת הגופן המקורי לאייקונים - זה יפתור את הריבועים */
 .fa, .fas, .far, .fal, .fab, .fa-solid, .fa-regular, .fa-brands {
-    font-family: "Font Awesome 6 Free" !important;
+    font-family: "Font Awesome 6 Free" !important; /* שם הפונט של הספרייה */
     font-weight: 900; 
 }
 
@@ -49,6 +48,7 @@ body {
 }
 
 .nav-card { background: var(--dark-grey); border-radius: 8px; padding: 15px; }
+
 .nav-link { 
     padding: 12px; 
     cursor: pointer; 
@@ -60,6 +60,7 @@ body {
     font-size: 14px; 
     transition: 0.2s; 
 }
+
 .nav-link:hover, .nav-link.active { color: white; }
 .nav-link i { font-size: 20px; }
 
@@ -68,6 +69,7 @@ body {
     background: white; color: black; border: none; padding: 10px 20px; 
     border-radius: 20px; font-weight: bold; cursor: pointer; width: 100%;
 }
+
 .user-info { display: flex; align-items: center; gap: 10px; }
 .user-info img { width: 32px; height: 32px; border-radius: 50%; }
 
@@ -82,15 +84,29 @@ body {
 }
 
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+
 .search-bar { 
-    background: #242424; border-radius: 50px; padding: 8px 15px; 
-    display: flex; align-items: center; width: 350px; border: 1px solid transparent;
+    background: #242424; 
+    border-radius: 50px; 
+    padding: 8px 15px; 
+    display: flex; 
+    align-items: center; 
+    width: 350px; 
+    border: 1px solid transparent;
 }
+
 .search-bar:focus-within { border-color: #555; }
+
 .search-bar input { 
-    background: transparent; border: none; outline: none; color: white; 
-    width: 100%; margin-right: 10px; font-size: 14px;
+    background: transparent; 
+    border: none; 
+    outline: none; 
+    color: white; 
+    width: 100%; 
+    margin-right: 10px; 
+    font-size: 14px; 
 }
+
 .search-bar i { color: var(--text-dim); }
 
 /* --- Video Grid --- */
@@ -108,9 +124,10 @@ body {
     transition: background 0.3s ease;
     position: relative;
 }
+
 .v-card:hover { background: #282828; }
 
-/* תיקון מיקום הזמן על הסרטון */
+/* תיקון כירורגי 1: מיקום ועיצוב משך הזמן */
 .v-thumb { 
     position: relative; 
     width: 100%; 
@@ -124,7 +141,7 @@ body {
 .v-duration {
     position: absolute;
     bottom: 8px;
-    left: 8px; /* הצמדה לצד שמאל ב-RTL */
+    left: 8px;
     background: rgba(0, 0, 0, 0.8);
     color: white;
     padding: 2px 5px;
@@ -138,42 +155,55 @@ body {
     font-size: 15px; margin: 0 0 8px 0; 
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
 }
+
 .v-info p { font-size: 13px; color: var(--text-dim); margin: 0; }
 
 .card-footer { 
-    display: flex; justify-content: space-between; align-items: center; margin-top: 12px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-top: 12px; 
 }
+
 .card-footer span { font-size: 12px; color: var(--text-dim); }
 
-/* עיצוב הלבבות */
+/* תיקון כירורגי 2: לבבות - רק לב מלא מקבל צבע */
 .fav-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: 0.2s; }
 .fav-btn:hover { transform: scale(1.1); color: white; }
-.fav-btn .fa-solid.fa-heart { color: var(--spotify-green); } /* לב מלא בירוק */
+.fav-btn .fa-solid.fa-heart { color: var(--spotify-green); }
 
 /* --- Player Bar (Bottom) --- */
+/* תיקון כירורגי 3: הסתרת הסרגל כברירת מחדל */
 .player-bar {
     grid-column: span 2; 
     background: #000; 
     border-top: 1px solid var(--border-color);
-    display: none; /* הסרגל מוסתר כברירת מחדל */
+    display: none; /* שונה מ-flex ל-none */
     align-items: center; 
     justify-content: space-between;
     padding: 0 20px;
     z-index: 10000;
 }
 
-/* הצגת הסרגל רק בזמן ניגון (מופעל ע"י JS) */
+/* הוספת קלאס להצגת הסרגל (להוספה דרך JS בזמן הפעלה) */
 .player-bar.active-player {
     display: flex !important;
 }
 
 .now-playing { display: flex; align-items: center; gap: 15px; width: 30%; }
 .now-playing img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; }
+
 .video-meta h4 { font-size: 14px; margin: 0 0 4px 0; }
 .video-meta p { font-size: 11px; color: var(--text-dim); margin: 0; }
 
 .player-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.bottom-desc { font-size: 12px; color: var(--text-dim); text-align: center; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bottom-desc { 
+    font-size: 12px; color: var(--text-dim); text-align: center; 
+    max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+}
+
+.player-right { width: 30%; display: flex; justify-content: flex-end; }
+#current-category { font-size: 12px; color: var(--spotify-green); border: 1px solid var(--spotify-green); padding: 4px 12px; border-radius: 20px; }
 
 /* --- Floating Player Window --- */
 .floating-window {
@@ -187,7 +217,9 @@ body {
     height: 38px; background: #181818; cursor: move; 
     display: flex; align-items: center; justify-content: space-between; padding: 0 15px;
 }
+
 .close-player { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+
 .video-container { width: 100%; aspect-ratio: 16/9; background: #000; }
 .video-container iframe { width: 100%; height: 100%; border: none; }
 
@@ -197,10 +229,12 @@ body {
     background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center;
     z-index: 20000;
 }
+
 .modal-content {
     background: #282828; color: white; width: 90%; max-width: 500px;
     border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
+
 .modal-header { padding: 20px; border-bottom: 1px solid #3e3e3e; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h2 { margin: 0; font-size: 18px; color: var(--spotify-green); }
 .close-modal-btn { background: none; border: none; color: #b3b3b3; font-size: 28px; cursor: pointer; }
