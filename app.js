@@ -418,5 +418,5 @@ window.onclick = function(event) {
 // מאזינים לאירועים
 document.getElementById('globalSearch').addEventListener('input', (e) => fetchVideos(e.target.value));
 
-// הפעלה
+הפעלה
 init();
