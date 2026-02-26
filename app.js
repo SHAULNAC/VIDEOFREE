@@ -170,7 +170,7 @@ function renderVideoGrid(videos) {
         return `
             <div class="v-card" onclick="preparePlay('${encodedData}')">
                 <div class="v-thumb">
-                    <img src="${v.thumbnail_url}" alt="${title}" loading="lazy">
+                    <img src="${v.thumbnail}" alt="${title}" loading="lazy">
                     <span class="v-duration">${v.duration || ''}</span>
                     <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${videoId}')">
                         <i class="${favIconClass} fa-heart" id="fav-icon-${videoId}"></i>
