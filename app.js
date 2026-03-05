@@ -253,9 +253,33 @@ let lastCurrentTime = -1;
 let stuckAtEndCounter = 0;
 
 async function preparePlay(encodedData) {
+    // 1. איפוס משתני בקרה וניהול תור
+    window.autoPlayTriggered = false;
+    let lastTime = -1;
+    let stuckCounter = 0;
+    let hasStartedPlaying = false; 
+    let bufferingStartTime = 0;
+    activeQueue = [...displayResults];
+
+    // 2. פונקציית הדילוג (מוגדרת פנימית)
+    function triggerNext() {
+        if (window.autoPlayTriggered) return;
+        window.autoPlayTriggered = true;
+        clearTimeout(deadOnArrivalTimer); 
+        console.log("מעבר אוטומטי הופעל...");
+        playNextInQueue();
+    }
+
+    // 3. טיימר הגנה "מת בהגעה"
+    const deadOnArrivalTimer = setTimeout(() => {
+        if (!hasStartedPlaying) {
+            console.warn("סרטון לא התחיל לנגן. מדלג...");
+            triggerNext();
+        }
+    }, 12000);
+
     try {
         const data = JSON.parse(decodeURIComponent(atob(encodedData)));
-        activeQueue = [...displayResults];
 
         // --- שליחה לגוגל אנליטיקס ---
         if (typeof gtag === 'function') {
@@ -293,58 +317,6 @@ async function preparePlay(encodedData) {
             autoplay: 1,
             enablejsapi: 1,
             rel: 0,
-            cc_load_policy: 1, 
-            origin: window.location.origin
-        });
-
-        container.innerHTML = `
-            <div id="player-loader" class="player-loader">
-                <i class="fa-solid fa-play"></i>
-            </div>
-            <iframe id="yt-iframe" 
-                src="https://www.youtube.com/embed/${data.id}?${videoParams.toString()}" 
-                frameborder="0" 
-                allow="autoplay; encrypted-media; picture-in-picture" 
-                allowfullscreen
-                style="opacity: 0; width: 100%; height: 100%; transition: opacity 0.5s ease; position: absolute; top: 0; left: 0; z-index: 2;"
-                onload="const loader = document.getElementById('player-loader'); if(loader) loader.style.display='none'; this.style.opacity='1';">
-            </iframe>`;
-      // משתנים למעקב (מחוץ לפונקציה)
-
-
-window.autoPlayTriggered = false;
-    let lastTime = -1;
-    let stuckCounter = 0;
-    
-    // --- הגנות חדשות: הפעלה ותקיעה ---
-    let hasStartedPlaying = false; 
-    let bufferingStartTime = 0;
-
-    // טיימר "מת בהגעה" - אם לא התחיל לנגן תוך 12 שניות, דלג!
-    const deadOnArrivalTimer = setTimeout(() => {
-        if (!hasStartedPlaying) {
-            console.warn("סרטון לא התחיל לנגן (נחסם/פרטי/הוסר). מדלג לבא...");
-            triggerNext();
-        }
-    }, 12000); // 12 שניות
-
-    // פונקציית הדילוג
-    function triggerNext() {
-        if (window.autoPlayTriggered) return;
-        window.autoPlayTriggered = true;
-        clearTimeout(deadOnArrivalTimer); // ביטול הטיימר כדי למנוע קריאות כפולות
-        console.log("מעבר אוטומטי הופעל...");
-        playNextInQueue();
-    }
-
-    try {
-        const data = JSON.parse(decodeURIComponent(atob(encodedData)));
-        const container = document.getElementById('player-container');
-        
-        const videoParams = new URLSearchParams({
-            autoplay: 1,
-            enablejsapi: 1,
-            rel: 0,
             origin: window.location.origin
         });
 
@@ -354,20 +326,17 @@ window.autoPlayTriggered = false;
                 src="https://www.youtube-nocookie.com/embed/${data.id}?${videoParams.toString()}" 
                 frameborder="0" allow="autoplay; encrypted-media" allowfullscreen
                 style="opacity: 0; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index:2; transition: opacity 0.5s;"
-                onload="document.getElementById('player-loader').style.display='none'; this.style.opacity='1';">
+                onload="const loader = document.getElementById('player-loader'); if(loader) loader.style.display='none'; this.style.opacity='1';">
             </iframe>`;
 
+        // --- המאזין להודעות מיוטיוב ---
         window.onmessage = function(e) {
             if (!e.origin.includes("youtube")) return;
-            
             try {
                 const msgData = JSON.parse(e.data);
-                
                 if (window.autoPlayTriggered) return;
 
-                // --- הגנה 1: זיהוי שגיאות רשמיות (סרטון הוסר, פרטי, חסום) ---
                 if (msgData.event === 'onError' || msgData.event === 'error') {
-                    console.error("יוטיוב דיווח על שגיאה (סרטון חסום/הוסר). קוד:", msgData.info || msgData.data);
                     triggerNext();
                     return;
                 }
@@ -375,41 +344,22 @@ window.autoPlayTriggered = false;
                 const info = msgData.info;
                 if (!info) return;
 
-                // --- עדכון מצב נגן ---
                 if (info.playerState !== undefined) {
-                    
-                    // הסרטון התחיל לנגן! מבטלים את הטיימר של "מת בהגעה"
                     if (info.playerState === 1) {
                         hasStartedPlaying = true;
                         clearTimeout(deadOnArrivalTimer);
-                        bufferingStartTime = 0; // איפוס מונה טעינה
                     }
-                    
-                    // --- הגנה 2: טעינה אינסופית (Buffering) ---
-                    // 3 = מצב Buffering. אם נתקע שם, נתחיל לספור
                     if (info.playerState === 3) {
                         if (bufferingStartTime === 0) bufferingStartTime = Date.now();
-                        // אם תקוע בטעינה יותר מ-15 שניות
-                        else if (Date.now() - bufferingStartTime > 15000) {
-                            console.warn("תקוע בטעינה יותר מדי זמן. מדלג...");
-                            triggerNext();
-                            return;
-                        }
+                        else if (Date.now() - bufferingStartTime > 15000) triggerNext();
                     } else {
-                        bufferingStartTime = 0; // יצא מטעינה, נאפס
+                        bufferingStartTime = 0;
                     }
-
-                    // סיום רגיל
-                    if (info.playerState === 0) {
-                        triggerNext();
-                        return;
-                    }
+                    if (info.playerState === 0) triggerNext();
                 }
 
-                // --- הגנה 3: מנגנון הדילוג של סוף הסרטון (תקיעת נטפרי) ---
                 if (hasStartedPlaying && info.currentTime && info.duration) {
                     const timeLeft = info.duration - info.currentTime;
-                    
                     if (timeLeft < 5) {
                         if (info.currentTime === lastTime) {
                             stuckCounter++;
@@ -423,55 +373,31 @@ window.autoPlayTriggered = false;
             } catch (err) {}
         };
 
-    
+        // --- עדכון UI ---
+        document.getElementById('current-title').textContent = data.t || "ללא כותרת";
+        document.getElementById('current-channel').textContent = data.c || "";
+        document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v || 0}`;
+        document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l || 0}`;
+        if (document.getElementById('current-category')) document.getElementById('current-category').textContent = data.cat || "כללי";
 
-        // --- עדכון UI מיידי מה-Base64 (כולל צפיות, לייקים וקטגוריה) ---
-        if (document.getElementById('current-title')) 
-            document.getElementById('current-title').textContent = data.t || "ללא כותרת";
-            
-        if (document.getElementById('current-channel')) 
-            document.getElementById('current-channel').textContent = data.c || "";
-
-        // הוספת צפיות ולייקים מה-Base64
-        if (document.getElementById('stat-views')) 
-            document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v || 0}`;
-        
-        if (document.getElementById('stat-likes')) 
-            document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l || 0}`;
-
-        // הוספת קטגוריה מה-Base64
-        const catElem = document.getElementById('current-category');
-        if (catElem) catElem.textContent = data.cat || "כללי";
-
-        // הכנה לתיאור שיגיע מהשרת
+        // --- נתונים מסופבייס ---
         const descElem = document.getElementById('bottom-description');
         if (descElem) descElem.textContent = "טוען תיאור...";
 
-        // --- השלמת נתונים כבדים מסופבייס (רק תיאור) ---
-        client.from('videos')
-            .select('description')
-            .eq('id', data.id)
-            .single()
+        client.from('videos').select('description').eq('id', data.id).single()
             .then(({ data: extra }) => {
-                if (extra && descElem) {
-                    descElem.textContent = extra.description || "אין תיאור זמין";
-                }
+                if (extra && descElem) descElem.textContent = extra.description || "אין תיאור זמין";
             });
 
-        // --- עדכון היסטוריה ---
         if (typeof currentUser !== 'undefined' && currentUser) {
-            client.from('history').upsert([
-                { user_id: currentUser.id, video_id: data.id, created_at: new Date() }
-            ]).then(() => {
-                if (typeof loadSidebarLists === 'function') loadSidebarLists();
-            });
+            client.from('history').upsert([{ user_id: currentUser.id, video_id: data.id, created_at: new Date() }])
+                .then(() => { if (typeof loadSidebarLists === 'function') loadSidebarLists(); });
         }
 
-    } catch (e) { 
-        console.error("שגיאה בהפעלת הסרטון:", e); 
+    } catch (e) {
+        console.error("שגיאה בהפעלת הסרטון:", e);
     }
 }
-
 async function playNextInQueue() {
     const iframe = document.getElementById('yt-iframe');
     if (!iframe) return;
