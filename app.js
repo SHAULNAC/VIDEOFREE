@@ -137,7 +137,7 @@ async function fetchVideos(query = "", isAppend = false) {
 
     if (!currentSearchQuery) {
         const { data } = await client.from('videos')
-            .select('*')
+            .select('id, title, channel_title, thumbnail, duration, views_count, likes_count, category_id')
             .order('published_at', { ascending: false })
             .range(from, to);
         fetchedData = data;
@@ -192,25 +192,24 @@ function renderVideoGrid(videos, isAppend = false) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
 
-    const htmlString = videos.map(v => {
-        // ... (שאר התוכן של הפונקציה נשאר בדיוק אותו הדבר, העתק את הקיים) ...
-        const videoId = v.id;
-        const title = escapeHtml(v.title);
-        const channel = escapeHtml(v.channel_title);
-        
-        const thumbUrl = v.thumbnail; 
+   const htmlString = videos.map(v => {
+    // מניעת כפילויות: משתמשים ישירות בערכים מתוך v בתוך ה-HTML והאובייקט
+    const videoId = v.id;
+    const safeTitle = escapeHtml(v.title);
+    const safeChannel = escapeHtml(v.channel_title);
+    
+    // אובייקט הנתונים למעבר לנגן - כולל הכל חוץ מהתיאור הכבד
+    const videoData = {
+        id: videoId,
+        t: v.title,
+        c: v.channel_title,
+        cat: categoryMap[v.category_id] || "כללי",
+        v: v.views_count,
+        l: v.likes_count
+    };
 
-        const videoData = {
-            id: videoId,
-            t: v.title,
-            c: v.channel_title,
-            cat: categoryMap[v.category_id] || "כללי",
-            v: v.views_count,
-            l: v.likes_count,
-            desc: v.description
-        };
-        const encodedData = btoa(encodeURIComponent(JSON.stringify(videoData)));
-
+    // קידוד האובייקט למחרוזת קצרה יחסית
+    const encodedData = btoa(encodeURIComponent(JSON.stringify(videoData)));
         const isFav = userFavorites.includes(videoId);
         const favIconClass = isFav ? 'fa-solid' : 'fa-regular';
 
@@ -246,23 +245,26 @@ function renderVideoGrid(videos, isAppend = false) {
 
 
 
-function preparePlay(encodedData) {
+async function preparePlay(encodedData) {
     try {
         const data = JSON.parse(decodeURIComponent(atob(encodedData)));
+
         // --- שליחה לגוגל אנליטיקס ---
         if (typeof gtag === 'function') {
             gtag('event', 'video_start', {
                 'video_title': data.t,
                 'video_id': data.id,
-                'video_category': data.cat
+                'video_category': data.cat || "כללי"
             });
         }
+
         const playerWin = document.getElementById('floating-player');
         const playerBar = document.getElementById('main-player-bar'); 
         const container = document.getElementById('youtubePlayer');
         
         if (!playerWin || !container) return;
 
+        // --- אנימציית פתיחה ---
         playerWin.style.display = 'flex'; 
         playerWin.style.opacity = '0';
         playerWin.style.transform = 'translateY(20px)';
@@ -278,6 +280,7 @@ function preparePlay(encodedData) {
             playerBar.classList.add('show-player'); 
         }
 
+        // --- הגדרת הנגן ---
         const videoParams = new URLSearchParams({
             autoplay: 1,
             enablejsapi: 1,
@@ -289,7 +292,7 @@ function preparePlay(encodedData) {
         container.innerHTML = `
             <div id="player-loader" class="player-loader">
                 <i class="fa-solid fa-play"></i>
-                </div>
+            </div>
             <iframe id="yt-iframe" 
                 src="https://www.youtube.com/embed/${data.id}?${videoParams.toString()}" 
                 frameborder="0" 
@@ -299,24 +302,40 @@ function preparePlay(encodedData) {
                 onload="const loader = document.getElementById('player-loader'); if(loader) loader.style.display='none'; this.style.opacity='1';">
             </iframe>`;
         
+        // --- עדכון UI מיידי מה-Base64 (כולל צפיות, לייקים וקטגוריה) ---
         if (document.getElementById('current-title')) 
             document.getElementById('current-title').textContent = data.t || "ללא כותרת";
             
         if (document.getElementById('current-channel')) 
             document.getElementById('current-channel').textContent = data.c || "";
-        
-        const catElem = document.getElementById('current-category');
-        if (catElem) catElem.textContent = data.cat || "כללי";
-        
+
+        // הוספת צפיות ולייקים מה-Base64
         if (document.getElementById('stat-views')) 
             document.getElementById('stat-views').innerHTML = `<i class="fa-solid fa-eye"></i> ${data.v || 0}`;
         
         if (document.getElementById('stat-likes')) 
             document.getElementById('stat-likes').innerHTML = `<i class="fa-solid fa-thumbs-up"></i> ${data.l || 0}`;
-        
-        const descElem = document.getElementById('bottom-description');
-        if (descElem) descElem.textContent = data.desc || "";
 
+        // הוספת קטגוריה מה-Base64
+        const catElem = document.getElementById('current-category');
+        if (catElem) catElem.textContent = data.cat || "כללי";
+
+        // הכנה לתיאור שיגיע מהשרת
+        const descElem = document.getElementById('bottom-description');
+        if (descElem) descElem.textContent = "טוען תיאור...";
+
+        // --- השלמת נתונים כבדים מסופבייס (רק תיאור) ---
+        client.from('videos')
+            .select('description')
+            .eq('id', data.id)
+            .single()
+            .then(({ data: extra }) => {
+                if (extra && descElem) {
+                    descElem.textContent = extra.description || "אין תיאור זמין";
+                }
+            });
+
+        // --- עדכון היסטוריה ---
         if (typeof currentUser !== 'undefined' && currentUser) {
             client.from('history').upsert([
                 { user_id: currentUser.id, video_id: data.id, created_at: new Date() }
