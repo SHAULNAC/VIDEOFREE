@@ -192,38 +192,34 @@ function renderVideoGrid(videos, isAppend = false) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
 
-   const htmlString = videos.map(v => {
-    // מניעת כפילויות: משתמשים ישירות בערכים מתוך v בתוך ה-HTML והאובייקט
-    const videoId = v.id;
-    const safeTitle = escapeHtml(v.title);
-    const safeChannel = escapeHtml(v.channel_title);
-    
-    // אובייקט הנתונים למעבר לנגן - כולל הכל חוץ מהתיאור הכבד
-    const videoData = {
-        id: videoId,
-        t: v.title,
-        c: v.channel_title,
-        cat: categoryMap[v.category_id] || "כללי",
-        v: v.views_count,
-        l: v.likes_count
-    };
+    const htmlString = videos.map(v => {
+        const videoId = v.id;
+        const safeTitle = escapeHtml(v.title);
+        const safeChannel = escapeHtml(v.channel_title);
+        
+        const videoData = {
+            id: videoId,
+            t: v.title,
+            c: v.channel_title,
+            cat: categoryMap[v.category_id] || "כללי",
+            v: v.views_count,
+            l: v.likes_count
+        };
 
-    // קידוד האובייקט למחרוזת קצרה יחסית
-    const encodedData = btoa(encodeURIComponent(JSON.stringify(videoData)));
+        const encodedData = btoa(encodeURIComponent(JSON.stringify(videoData)));
         const isFav = userFavorites.includes(videoId);
         const favIconClass = isFav ? 'fa-solid' : 'fa-regular';
-
         const displayDuration = v.duration ? formatDuration(v.duration) : '';
 
         return `
             <div class="v-card" onclick="preparePlay('${encodedData}')">
                 <div class="v-thumb">
-                    <img src="${thumbUrl}" alt="${title}" loading="lazy">
+                    <img src="${v.thumbnail}" alt="${safeTitle}" loading="lazy">
                     <span class="v-duration">${displayDuration}</span>
                 </div>
                 <div class="v-info">
-                    <h3 title="${title}">${title}</h3>
-                    <p>${channel}</p>
+                    <h3 title="${safeTitle}">${safeTitle}</h3>
+                    <p>${safeChannel}</p>
                     <div class="card-footer">
                         <span><i class="fa-solid fa-eye"></i> ${v.views_count || 0}</span>
                         <button class="fav-btn" onclick="event.stopPropagation(); toggleFavorite('${videoId}')">
@@ -235,14 +231,12 @@ function renderVideoGrid(videos, isAppend = false) {
         `;
     }).join('');
 
-    // השינוי החשוב:
     if (isAppend) {
         grid.insertAdjacentHTML('beforeend', htmlString);
     } else {
         grid.innerHTML = htmlString;
     }
 }
-
 
 
 async function preparePlay(encodedData) {
