@@ -308,20 +308,36 @@ async function preparePlay(encodedData) {
                 onload="const loader = document.getElementById('player-loader'); if(loader) loader.style.display='none'; this.style.opacity='1';">
             </iframe>`;
        window.onmessage = function(e) {
-    // נטפרי לפעמים משנה את ה-origin, אז נבדוק אם זה מכיל youtube
-    if (!e.origin.includes("youtube")) return; 
+    if (!e.origin.includes("youtube")) return;
     
     try {
         const msgData = JSON.parse(e.data);
         
-        // נשתמש בבדיקה רחבה יותר למקרה שנטפרי מסננת חלק מהמידע
-        if (msgData.event === 'infoDelivery' && msgData.info) {
-            if (msgData.info.playerState === 0) {
-                console.log("זוהה סיום סרטון (נטפרי), מפעיל אוטופליי...");
-                playNextInQueue();
+        // 1. זיהוי סיום רגיל (מצב 0)
+        if (msgData.event === 'infoDelivery' && msgData.info && msgData.info.playerState === 0) {
+            console.log("סיום רגיל - עובר לבא");
+            playNextInQueue();
+            return;
+        }
+
+        // 2. פתרון ל"מסך הצעות": בדיקת זמן נוכחי מול זמן סיום
+        // יוטיוב שולח עדכוני זמן (currentTime) ומשך סרטון (duration)
+        if (msgData.event === 'infoDelivery' && msgData.info && msgData.info.currentTime && msgData.info.duration) {
+            const timeLeft = msgData.info.duration - msgData.info.currentTime;
+            
+            // אם נשארה פחות משנייה אחת לסוף, והסרטון עדיין "כאילו" מנגן
+            if (timeLeft > 0 && timeLeft < 1.5) { 
+                console.log("מזהה הגעה לסוף הסרטון (לפני הצעות יוטיוב) - מפעיל אוטופליי");
+                // מונע הפעלה כפולה
+                if (!window.autoPlayTriggered) {
+                    window.autoPlayTriggered = true;
+                    playNextInQueue();
+                    
+                    // איפוס הטריגר אחרי 2 שניות כדי לאפשר את הסרטון הבא
+                    setTimeout(() => { window.autoPlayTriggered = false; }, 2000);
+                }
             }
         }
-   
     } catch (err) {}
 };
         // --- עדכון UI מיידי מה-Base64 (כולל צפיות, לייקים וקטגוריה) ---
