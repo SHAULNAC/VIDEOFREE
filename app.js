@@ -312,63 +312,118 @@ async function preparePlay(encodedData) {
       // משתנים למעקב (מחוץ לפונקציה)
 
 
-window.onmessage = function(e) {
-    if (!e.origin.includes("youtube")) return;
+window.autoPlayTriggered = false;
+    let lastTime = -1;
+    let stuckCounter = 0;
     
-    try {
-        const msgData = JSON.parse(e.data);
-        const info = msgData.info;
+    // --- הגנות חדשות: הפעלה ותקיעה ---
+    let hasStartedPlaying = false; 
+    let bufferingStartTime = 0;
 
-        if (window.autoPlayTriggered || !info) return;
-
-        // 1. זיהוי סיום רשמי (אם במקרה עבר)
-        if (info.playerState === 0) {
+    // טיימר "מת בהגעה" - אם לא התחיל לנגן תוך 12 שניות, דלג!
+    const deadOnArrivalTimer = setTimeout(() => {
+        if (!hasStartedPlaying) {
+            console.warn("סרטון לא התחיל לנגן (נחסם/פרטי/הוסר). מדלג לבא...");
             triggerNext();
-            return;
         }
+    }, 12000); // 12 שניות
 
-        // 2. המנגנון למניעת תקיעות בנטפרי (החלק החזק)
-        if (info.currentTime && info.duration) {
-            const timeLeft = info.duration - info.currentTime;
+    // פונקציית הדילוג
+    function triggerNext() {
+        if (window.autoPlayTriggered) return;
+        window.autoPlayTriggered = true;
+        clearTimeout(deadOnArrivalTimer); // ביטול הטיימר כדי למנוע קריאות כפולות
+        console.log("מעבר אוטומטי הופעל...");
+        playNextInQueue();
+    }
+
+    try {
+        const data = JSON.parse(decodeURIComponent(atob(encodedData)));
+        const container = document.getElementById('player-container');
+        
+        const videoParams = new URLSearchParams({
+            autoplay: 1,
+            enablejsapi: 1,
+            rel: 0,
+            origin: window.location.origin
+        });
+
+        container.innerHTML = `
+            <div id="player-loader" class="player-loader"><i class="fa-solid fa-play"></i></div>
+            <iframe id="yt-iframe" 
+                src="https://www.youtube-nocookie.com/embed/${data.id}?${videoParams.toString()}" 
+                frameborder="0" allow="autoplay; encrypted-media" allowfullscreen
+                style="opacity: 0; width: 100%; height: 100%; position: absolute; top:0; left:0; z-index:2; transition: opacity 0.5s;"
+                onload="document.getElementById('player-loader').style.display='none'; this.style.opacity='1';">
+            </iframe>`;
+
+        window.onmessage = function(e) {
+            if (!e.origin.includes("youtube")) return;
             
-            // בדיקה א': האם אנחנו ב"אזור הסכנה" (5 שניות אחרונות)?
-            if (timeLeft < 5) {
+            try {
+                const msgData = JSON.parse(e.data);
                 
-                // האם הזמן של הסרטון הפסיק להתקדם?
-                if (info.currentTime === lastCurrentTime) {
-                    stuckAtEndCounter++;
-                    
-                    // אם הסרטון "קפוא" באותו זמן כבר 3 דגימות (בערך 1.5 שניות)
-                    // ובכל זאת אנחנו קרובים לסוף - זה בוודאות סיום של נטפרי
-                    if (stuckAtEndCounter > 3) {
-                        console.log("זוהתה תקיעת נטפרי בסוף סרטון. מדלג לבא...");
-                        triggerNext();
-                    }
-                } else {
-                    stuckAtEndCounter = 0; // הסרטון עדיין מתקדם
-                }
-                lastCurrentTime = info.currentTime;
-            } else {
-                // אנחנו רחוקים מהסוף - מאפסים הכל כדי למנוע דילוגים בטעות
-                stuckAtEndCounter = 0;
-                lastCurrentTime = info.currentTime;
-            }
-        }
-    } catch (err) {}
-};
+                if (window.autoPlayTriggered) return;
 
-function triggerNext() {
-    if (window.autoPlayTriggered) return;
-    window.autoPlayTriggered = true;
+                // --- הגנה 1: זיהוי שגיאות רשמיות (סרטון הוסר, פרטי, חסום) ---
+                if (msgData.event === 'onError' || msgData.event === 'error') {
+                    console.error("יוטיוב דיווח על שגיאה (סרטון חסום/הוסר). קוד:", msgData.info || msgData.data);
+                    triggerNext();
+                    return;
+                }
+
+                const info = msgData.info;
+                if (!info) return;
+
+                // --- עדכון מצב נגן ---
+                if (info.playerState !== undefined) {
+                    
+                    // הסרטון התחיל לנגן! מבטלים את הטיימר של "מת בהגעה"
+                    if (info.playerState === 1) {
+                        hasStartedPlaying = true;
+                        clearTimeout(deadOnArrivalTimer);
+                        bufferingStartTime = 0; // איפוס מונה טעינה
+                    }
+                    
+                    // --- הגנה 2: טעינה אינסופית (Buffering) ---
+                    // 3 = מצב Buffering. אם נתקע שם, נתחיל לספור
+                    if (info.playerState === 3) {
+                        if (bufferingStartTime === 0) bufferingStartTime = Date.now();
+                        // אם תקוע בטעינה יותר מ-15 שניות
+                        else if (Date.now() - bufferingStartTime > 15000) {
+                            console.warn("תקוע בטעינה יותר מדי זמן. מדלג...");
+                            triggerNext();
+                            return;
+                        }
+                    } else {
+                        bufferingStartTime = 0; // יצא מטעינה, נאפס
+                    }
+
+                    // סיום רגיל
+                    if (info.playerState === 0) {
+                        triggerNext();
+                        return;
+                    }
+                }
+
+                // --- הגנה 3: מנגנון הדילוג של סוף הסרטון (תקיעת נטפרי) ---
+                if (hasStartedPlaying && info.currentTime && info.duration) {
+                    const timeLeft = info.duration - info.currentTime;
+                    
+                    if (timeLeft < 5) {
+                        if (info.currentTime === lastTime) {
+                            stuckCounter++;
+                            if (stuckCounter > 3) triggerNext();
+                        } else {
+                            stuckCounter = 0;
+                            lastTime = info.currentTime;
+                        }
+                    }
+                }
+            } catch (err) {}
+        };
+
     
-    // ניקוי המונים לסרטון הבא
-    stuckAtEndCounter = 0;
-    lastCurrentTime = -1;
-    
-    playNextInQueue();
-    
-    setTimeout(() => { window.autoPlayTriggered = false; }, 3000);
-}
 
         // --- עדכון UI מיידי מה-Base64 (כולל צפיות, לייקים וקטגוריה) ---
         if (document.getElementById('current-title')) 
