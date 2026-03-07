@@ -371,10 +371,21 @@ async function preparePlay(encodedData) {
                 if (extra && descElem) descElem.textContent = extra.description || "אין תיאור זמין";
             });
 
-        if (typeof currentUser !== 'undefined' && currentUser) {
-            client.from('history').upsert([{ user_id: currentUser.id, video_id: data.id, created_at: new Date() }])
-                .then(() => { if (typeof loadSidebarLists === 'function') loadSidebarLists(); });
-        }
+       if (currentUser) {
+    client.from('history')
+        .upsert(
+            { 
+                user_id: currentUser.id, 
+                video_id: data.id, 
+                created_at: new Date().toISOString() // שימוש בפורמט זמן סטנדרטי
+            }, 
+            { onConflict: 'user_id,video_id' } // אומר לסופבייס: "אם הצמד הזה קיים - תעדכן!"
+        )
+        .then(({ error }) => {
+            if (error) console.error("שגיאה בעדכון היסטוריה:", error.message);
+            if (typeof loadSidebarLists === 'function') loadSidebarLists(); 
+        });
+}
 
     } catch (e) {
         console.error("שגיאה בהפעלת הסרטון:", e);
