@@ -711,11 +711,42 @@ if (contentArea) {
     });
 }
 
-document.getElementById('globalSearch').addEventListener('input', (e) => {
-    const query = e.target.value.trim();
-    fetchVideos(query);
+let searchDebounceTimeout = null;
+const searchInput = document.getElementById('globalSearch');
 
-    clearTimeout(analyticsTimeout); 
+// אירוע הקלדה (Input) - מפעיל טיימר של 1000 מילישניות
+searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+
+    // איפוס הטיימר הקודם בכל הקלדה חדשה
+    clearTimeout(searchDebounceTimeout);
+    clearTimeout(analyticsTimeout);
+
+    // הגדרת טיימר חדש לחיפוש
+    searchDebounceTimeout = setTimeout(() => {
+        // קריאה ל-fetchVideos ללא פרמטר שני אומרת לו לרנדר מהתחלה (isAppend = false)
+        fetchVideos(query);
+        triggerAnalytics(query);
+    }, 1000);
+});
+
+// אירוע מקלדת (Keydown) - מזהה לחיצה על אנטר לביצוע מיידי
+searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const query = e.target.value.trim();
+        
+        // ביטול הטיימר הממתין כדי שלא ירוץ החיפוש פעמיים
+        clearTimeout(searchDebounceTimeout);
+        clearTimeout(analyticsTimeout);
+        
+        // הפעלה מיידית של החיפוש
+        fetchVideos(query);
+        triggerAnalytics(query);
+    }
+});
+
+// פונקציית עזר לטיפול באנליטיקס כדי למנוע כפילות קוד
+function triggerAnalytics(query) {
     if (query.length > 0) {
         analyticsTimeout = setTimeout(() => {
             if (typeof gtag === 'function') {
@@ -724,8 +755,8 @@ document.getElementById('globalSearch').addEventListener('input', (e) => {
                 });
                 console.log("Analytics: Search tracked -> " + query);
             }
-        }, 2000);
+        }, 2000); // האנליטיקס עדיין יישלח בדיליי של שתי שניות לאחר ביצוע החיפוש
     }
-});
+}
 
 init();
