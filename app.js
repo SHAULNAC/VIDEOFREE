@@ -362,26 +362,33 @@ async function preparePlay(encodedData) {
                     'onReady': (event) => {
                         event.target.playVideo();
                     },
-                    'onStateChange': (event) => {
+                    'onStateChange': async (event) => {
                         if (event.data === YT.PlayerState.PLAYING) {
                             isPlaying = true;
                             updatePlayStatus(true);
-                            
-                            // הפעלת טיימר בטיחות (רשת ביטחון לנטפרי)
-                            clearTimeout(safetyTimer);
-                            const duration = ytPlayer.getDuration() || 300; // ברירת מחדל 5 דקות אם נכשל
-                            if (duration > 0) {
-                                safetyTimer = setTimeout(() => {
-                                    console.warn("טיימר בטיחות פקע - מפעיל מעבר לסרטון הבא");
-                                    triggerNext();
-                                }, (duration + 5) * 1000); // 5 שניות מרווח
-                            }
-                            
                         } else if (event.data === YT.PlayerState.PAUSED) {
                             isPlaying = false;
                             updatePlayStatus(false);
                         } else if (event.data === YT.PlayerState.ENDED) {
-                            triggerNext();
+                            // הפעלה אוטומטית חכמה
+                            console.log("הסרטון הסתיים, מחפש המלצה חכמה...");
+                            const nextVid = await fetchSmartRecommendation();
+
+                            if (nextVid) {
+                                const videoData = {
+                                    id: nextVid.id,
+                                    t: nextVid.title,
+                                    c: nextVid.channel_title,
+                                    cat: categoryMap[nextVid.category_id] || "כללי",
+                                    v: nextVid.views_count,
+                                    l: nextVid.likes_count
+                                };
+                                const encoded = btoa(encodeURIComponent(JSON.stringify(videoData)));
+                                preparePlay(encoded);
+                            } else {
+                                // Fallback לתור הרגיל אם אין המלצה
+                                triggerNext();
+                            }
                         }
                     },
                     'onError': (event) => {
@@ -407,24 +414,55 @@ async function preparePlay(encodedData) {
                 if (extra && descElem) descElem.textContent = extra.description || "אין תיאור זמין";
             });
 
-       if (currentUser) {
-    client.from('history')
-        .upsert(
-            { 
-                user_id: currentUser.id, 
-                video_id: data.id, 
-                created_at: new Date().toISOString() // שימוש בפורמט זמן סטנדרטי
-            }, 
-            { onConflict: 'user_id,video_id' } // אומר לסופבייס: "אם הצמד הזה קיים - תעדכן!"
-        )
-        .then(({ error }) => {
-            if (error) console.error("שגיאה בעדכון היסטוריה:", error.message);
-            if (typeof loadSidebarLists === 'function') loadSidebarLists(); 
-        });
-}
+        if (currentUser) {
+            client.from('history')
+                .upsert(
+                    { 
+                        user_id: currentUser.id, 
+                        video_id: data.id, 
+                        created_at: new Date().toISOString() 
+                    }, 
+                    { onConflict: 'user_id,video_id' }
+                )
+                .then(({ error }) => {
+                    if (error) console.error("שגיאה בעדכון היסטוריה:", error.message);
+                    if (typeof loadSidebarLists === 'function') loadSidebarLists(); 
+                });
+        }
 
     } catch (e) {
         console.error("שגיאה בהפעלת הסרטון:", e);
+    }
+}
+async function fetchSmartRecommendation() {
+    if (!currentUser || !currentPlayingId) return null;
+
+    try {
+        // שלב א': שליפת נתוני הסרטון שמנגן עכשיו (בשביל תגיות וקטגוריה)
+        const { data: currentVid, error: vidError } = await client
+            .from('videos')
+            .select('category_id, tags')
+            .eq('id', currentPlayingId)
+            .single();
+
+        if (vidError || !currentVid) throw new Error("Could not fetch current video metadata");
+
+        // שלב ב': הפעלת ה-RPC עם הפרמטרים שדרשת
+        const { data: recommendation, error: rpcError } = await client.rpc('get_smart_recommendations', {
+            p_user_id: currentUser.id,
+            p_current_video_id: currentPlayingId,
+            p_category_id: currentVid.category_id,
+            p_current_tags: currentVid.tags || "", // שליחת התגיות כטקסט
+            p_limit: 1 // אנחנו רוצים רק הצעה אחת מדויקת
+        });
+
+        if (rpcError) throw rpcError;
+
+        return (recommendation && recommendation.length > 0) ? recommendation[0] : null;
+
+    } catch (err) {
+        console.error("Smart Recommendation Error:", err.message);
+        return null;
     }
 }
 
