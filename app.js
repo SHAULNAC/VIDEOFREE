@@ -727,7 +727,7 @@ searchInput.addEventListener('input', (e) => {
         // קריאה ל-fetchVideos ללא פרמטר שני אומרת לו לרנדר מהתחלה (isAppend = false)
         fetchVideos(query);
         triggerAnalytics(query);
-    }, 1000);
+    }, 500);
 });
 
 // אירוע מקלדת (Keydown) - מזהה לחיצה על אנטר לביצוע מיידי
