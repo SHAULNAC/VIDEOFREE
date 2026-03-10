@@ -110,6 +110,46 @@ function startVoiceSearch() {
     recognition.start();
 }
 
+// מעבר יזום לסרטון הבא בתור
+function playNextVideo() {
+    if (!currentPlayingId || activeQueue.length === 0) return;
+    const currentIndex = activeQueue.findIndex(v => v.id === currentPlayingId);
+    
+    if (currentIndex >= 0 && currentIndex < activeQueue.length - 1) {
+        const nextVid = activeQueue[currentIndex + 1];
+        playVideoFromObject(nextVid);
+    } else {
+        console.log("אין סרטון הבא בתור");
+    }
+}
+
+// מעבר יזום לסרטון הקודם בתור
+function playPreviousVideo() {
+    if (!currentPlayingId || activeQueue.length === 0) return;
+    const currentIndex = activeQueue.findIndex(v => v.id === currentPlayingId);
+    
+    if (currentIndex > 0) {
+        const prevVid = activeQueue[currentIndex - 1];
+        playVideoFromObject(prevVid);
+    } else {
+        console.log("אין סרטון קודם בתור");
+    }
+}
+
+// פונקציית עזר להמרת אובייקט סרטון לקידוד והפעלה
+function playVideoFromObject(vid) {
+    const videoData = {
+        id: vid.id,
+        t: vid.title,
+        c: vid.channel_title,
+        cat: categoryMap[vid.category_id] || "כללי",
+        v: vid.views_count,
+        l: vid.likes_count
+    };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(videoData)));
+    preparePlay(encoded);
+}
+
 async function init() {
     try {
         const { data: { user } } = await client.auth.getUser();
@@ -363,16 +403,15 @@ async function preparePlay(encodedData) {
         activeQueue = [...displayResults];
 
         // --- שליחה לגוגל אנליטיקס ---
-        // עדכון בתוך preparePlay (בחלק של שליחה לאנליטיקס):
-if (typeof gtag === 'function') {
-    const userName = currentUser ? currentUser.user_metadata.full_name : 'Guest';
-    gtag('event', 'video_start', {
-        'video_title': data.t,
-        'video_id': data.id,
-        'video_category': data.cat || "כללי",
-        'user_name': userName
-    });
-}
+        if (typeof gtag === 'function') {
+            const userName = currentUser ? currentUser.user_metadata.full_name : 'Guest';
+            gtag('event', 'video_start', {
+                'video_title': data.t,
+                'video_id': data.id,
+                'video_category': data.cat || "כללי",
+                'user_name': userName
+            });
+        }
 
         const playerWin = document.getElementById('floating-player');
         const playerBar = document.getElementById('main-player-bar'); 
@@ -414,14 +453,14 @@ if (typeof gtag === 'function') {
                 host: 'https://www.youtube.com',
                 playerVars: {
                     'autoplay': 1,
-                'mute': 0,
-                'controls': 1,
-                'origin': myOrigin,
-                'widget_referrer': myOrigin, // הפניה מלאה כולל התיקייה
-                'enablejsapi': 1,
-                'rel': 0,
-                'showinfo': 0,
-                'modestbranding': 1
+                    'mute': 0,
+                    'controls': 1,
+                    'origin': myOrigin,
+                    'widget_referrer': myOrigin, // הפניה מלאה כולל התיקייה
+                    'enablejsapi': 1,
+                    'rel': 0,
+                    'showinfo': 0,
+                    'modestbranding': 1
                 },
                 events: {
                     'onReady': (event) => {
@@ -495,10 +534,29 @@ if (typeof gtag === 'function') {
                 });
         }
 
+        // --- הוספת תמיכה ב-Media Session (שלט שמע/מקלדת) ---
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: data.t || "ללא כותרת",
+                artist: data.c || "FIE Player",
+                // משיג את התמונה של הסרטון מיוטיוב
+                artwork: [
+                    { src: `https://i.ytimg.com/vi/${data.id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
+                ]
+            });
+
+            // הגדרת מאזינים לכפתורי השמע של המערכת
+            navigator.mediaSession.setActionHandler('play', togglePlayPause);
+            navigator.mediaSession.setActionHandler('pause', togglePlayPause);
+            navigator.mediaSession.setActionHandler('previoustrack', playPreviousVideo);
+            navigator.mediaSession.setActionHandler('nexttrack', playNextVideo);
+        }
+
     } catch (e) {
         console.error("שגיאה בהפעלת הסרטון:", e);
     }
 }
+
 async function fetchSmartRecommendation() {
     if (!currentUser || !currentPlayingId) return null;
 
