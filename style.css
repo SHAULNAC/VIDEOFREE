@@ -1,5 +1,12 @@
 /* --- Variables & Base --- */
 :root {
+    --black: #0f172a; (כחול-כהה עמוק מאוד)
+
+--dark-grey: #1e293b;
+
+--spotify-green: #f97316; (כתום עז)
+
+--text-white: #f8fafc;
     --black: #000000;
     --dark-grey: #121212;
     --light-grey: #181818;
