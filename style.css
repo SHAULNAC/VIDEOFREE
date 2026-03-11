@@ -1,10 +1,10 @@
 /* --- Variables & Base --- */
 :root {
-    --black: #0f172a;
-    --dark-grey: #1e293b;
+    --black: #f8fafc
+    --dark-grey: #ffffff;
     --light-grey: #181818;
-    --spotify-green: #f97316;
-    --text-white: #f8fafc;
+    --spotify-green: #ea580c;
+    --text-white: #0f172a;
     --text-dim: #b3b3b3;
     --border-color: #282828;
 }
