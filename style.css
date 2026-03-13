@@ -473,3 +473,116 @@ body {
     border-radius: 50px; font-weight: bold; cursor: pointer; transition: transform 0.2s, filter 0.2s; 
 }
 .modal-confirm-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+
+/* --- Search Controls --- */
+.search-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.search-controls-top {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.search-chip {
+    border: 1px solid var(--border-color);
+    background: rgba(24, 24, 24, 0.9);
+    color: var(--text-white);
+    border-radius: 999px;
+    padding: 8px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.search-chip:hover {
+    border-color: var(--spotify-green);
+    transform: translateY(-1px);
+}
+
+.search-chip.active {
+    background: var(--spotify-green);
+    color: #071012;
+    border-color: var(--spotify-green);
+}
+
+
+.channel-cards-row {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.channel-cards-row::-webkit-scrollbar {
+    height: 8px;
+}
+
+.channel-card {
+    background: linear-gradient(160deg, rgba(24, 53, 86, 0.32), rgba(57, 36, 93, 0.28));
+    border: 1px solid rgba(120, 171, 255, 0.28);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 260px;
+    text-align: right;
+    color: var(--text-white);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.channel-card:hover {
+    transform: translateY(-2px);
+    border-color: #8fb5ff;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+.channel-card.active {
+    border-color: #7de1ff;
+    box-shadow: 0 0 0 1px rgba(125, 225, 255, 0.4);
+}
+
+.channel-card-thumb {
+    width: 88px;
+    height: 56px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.35);
+    flex-shrink: 0;
+}
+
+.channel-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.channel-card-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #b4c7f5;
+}
+
+.channel-card-info h3 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.channel-card-info p {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #d4def5;
+}

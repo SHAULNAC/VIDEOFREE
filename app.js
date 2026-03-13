@@ -12,6 +12,11 @@ const VIDEOS_PER_PAGE = 50;
 let isLoadingVideos = false;
 let hasMoreVideos = true;
 let currentSearchQuery = ""; 
+let currentSearchToken = 0;
+let channelMatchResults = [];
+let pinnedSearchResults = null;
+let isSearchPlaybackPinned = false;
+let currentChannelFilter = null;
 let userHistoryIds = []; 
 let videoWatchCounts = {};
 let displayResults = []; 
@@ -227,25 +232,156 @@ async function logout() {
 
 // --- חיפוש ---
 
-async function fetchVideos(query = "", isAppend = false) {
+function normalizeSearchTerm(text) {
+    return (text || '').replace(/\s+/g, ' ').trim();
+}
+
+function escapeForLike(text) {
+    return text.replace(/[\%_]/g, '\\$&');
+}
+
+async function detectChannelMatches(query) {
+    const normalized = normalizeSearchTerm(query);
+    if (!normalized || normalized.length < 2) return [];
+
+    try {
+        const escaped = escapeForLike(normalized);
+
+        const { data, error } = await client
+            .from('videos')
+            .select('channel_title, thumbnail')
+            .ilike('channel_title', `%${escaped}%`)
+            .limit(200);
+
+        if (error) {
+            console.warn('Channel detection failed:', error.message);
+            return [];
+        }
+
+        const channelsMap = new Map();
+        for (const row of (data || [])) {
+            if (!row.channel_title) continue;
+            const key = row.channel_title.toLowerCase();
+            if (!channelsMap.has(key)) {
+                channelsMap.set(key, {
+                    name: row.channel_title,
+                    thumbnail: row.thumbnail || '',
+                    sampleCount: 0
+                });
+            }
+            channelsMap.get(key).sampleCount += 1;
+            if (!channelsMap.get(key).thumbnail && row.thumbnail) {
+                channelsMap.get(key).thumbnail = row.thumbnail;
+            }
+        }
+
+        const names = [...channelsMap.values()];
+        if (names.length === 0) return [];
+
+        const q = normalized.toLowerCase();
+        const words = q.split(' ').filter(Boolean);
+
+        const scored = names
+            .map((channel) => {
+                const n = channel.name.toLowerCase();
+                let score = 0;
+                if (n === q) score += 100;
+                if (n.startsWith(q)) score += 70;
+                if (n.includes(q)) score += 40;
+                const covered = words.filter((w) => n.includes(w)).length;
+                score += covered * 8;
+                score += Math.min(channel.sampleCount, 10);
+                return { ...channel, score };
+            })
+            .filter((item) => item.score >= 40)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 12);
+
+        return scored;
+    } catch (err) {
+        console.warn('Channel detection error:', err);
+    }
+
+    return [];
+}
+
+function renderSearchControls() {
+    const controls = document.getElementById('search-controls');
+    if (!controls) return;
+
+    const pinClass = isSearchPlaybackPinned ? 'active' : '';
+    const pinButton = `
+        <div class="search-controls-top">
+            <button class="search-chip ${pinClass}" onclick="toggleSearchPlaybackPin()" title="השאר את תור ההפעלה של החיפוש הנוכחי">
+                <i class="fa-solid fa-play"></i>
+                <span>${isSearchPlaybackPinned ? 'ניגון חיפוש נעול' : 'נגן תוצאות חיפוש'}</span>
+            </button>
+        </div>
+    `;
+
+    const channelCards = channelMatchResults.length > 0
+        ? `
+        <div class="channel-cards-row">
+            ${channelMatchResults.map((channel) => {
+                const safeName = escapeHtml(channel.name);
+                const safeThumb = escapeHtml(channel.thumbnail || '');
+                const countText = channel.sampleCount > 0 ? `${channel.sampleCount} סרטונים לדוגמה` : 'ערוץ תואם';
+                const safeCountText = escapeHtml(countText);
+                const isActive = currentChannelFilter && currentChannelFilter.toLowerCase() === channel.name.toLowerCase();
+                const activeClass = isActive ? 'active' : '';
+                const encodedName = btoa(encodeURIComponent(channel.name));
+
+                return `
+                    <button class="channel-card ${activeClass}" onclick="applyChannelFilterByName('${encodedName}')" title="הצג תוצאות מהערוץ בלבד">
+                        <div class="channel-card-thumb">
+                            ${safeThumb ? `<img src="${safeThumb}" alt="${safeName}" loading="lazy">` : '<div class="channel-card-fallback"><i class="fa-solid fa-tv"></i></div>'}
+                        </div>
+                        <div class="channel-card-info">
+                            <h3>${safeName}</h3>
+                            <p>${safeCountText}</p>
+                        </div>
+                    </button>
+                `;
+            }).join('')}
+        </div>
+        `
+        : '';
+
+    controls.innerHTML = `${pinButton}${channelCards}`;
+}
+
+
+async function fetchVideos(query = "", isAppend = false, options = {}) {
     if (isLoadingVideos) return;
     currentAppMode = 'home';
     
+    const preserveChannelFilter = Boolean(options.preserveChannelFilter);
+
     if (!isAppend) {
-        currentSearchQuery = query.trim();
+        currentSearchQuery = normalizeSearchTerm(query);
         loadedVideosCount = 0;
         hasMoreVideos = true;
+        channelMatchResults = [];
+        if (!preserveChannelFilter) currentChannelFilter = null;
     } else if (!hasMoreVideos) {
         return;
     }
 
+    const searchToken = !isAppend ? ++currentSearchToken : currentSearchToken;
     isLoadingVideos = true;
     
     const from = loadedVideosCount;
     const to = from + VIDEOS_PER_PAGE - 1;
     let fetchedData = null;
 
-    if (!currentSearchQuery) {
+    if (currentChannelFilter) {
+        const { data } = await client.from('videos')
+            .select('id, title, channel_title, thumbnail, duration, views, likes, category_id')
+            .ilike('channel_title', currentChannelFilter)
+            .order('published_at', { ascending: false })
+            .range(from, to);
+        fetchedData = data || [];
+    } else if (!currentSearchQuery) {
         const { data } = await client.from('videos')
             .select('id, title, channel_title, thumbnail, duration, views, likes, category_id')
             .order('published_at', { ascending: false })
@@ -258,11 +394,16 @@ async function fetchVideos(query = "", isAppend = false) {
         fetchedData = data || [];
 
         if (!isAppend) {
+            channelMatchResults = await detectChannelMatches(cleanQuery);
+
             clearTimeout(debounceTimeout);
             debounceTimeout = setTimeout(async () => {
+                if (searchToken !== currentSearchToken || currentChannelFilter) return;
+
                 const translated = await getTranslationWithDB(cleanQuery);
                 if (translated && translated.toLowerCase() !== cleanQuery.toLowerCase()) {
                     const { data: transData } = await client.rpc('search_videos_prioritized', { search_term: translated }).range(0, VIDEOS_PER_PAGE - 1);
+                    if (searchToken !== currentSearchToken || currentChannelFilter) return;
                     if (transData && transData.length > 0) {
                         renderVideoGrid(transData, true); 
                     }
@@ -272,6 +413,13 @@ async function fetchVideos(query = "", isAppend = false) {
         
     }
     
+
+    if (searchToken !== currentSearchToken) {
+        isLoadingVideos = false;
+        return;
+    }
+
+    renderSearchControls();
 
     if (fetchedData && fetchedData.length > 0) {
         renderVideoGrid(fetchedData, isAppend);
@@ -413,7 +561,7 @@ async function preparePlay(encodedData) {
     try {
         const data = JSON.parse(decodeURIComponent(atob(encodedData)));
         currentPlayingId = data.id; 
-        activeQueue = [...displayResults];
+        activeQueue = isSearchPlaybackPinned && pinnedSearchResults ? [...pinnedSearchResults] : [...displayResults];
 
         // --- שליחה לגוגל אנליטיקס ---
         if (typeof gtag === 'function') {
@@ -588,6 +736,10 @@ async function preparePlay(encodedData) {
 }
 
 async function fetchSmartRecommendation() {
+    if (isSearchPlaybackPinned) {
+        return null;
+    }
+
     // 1. בדיקת בסיס: האם יש משתמש מחובר וסרטון פעיל
     if (!currentUser || !currentPlayingId) {
         console.log("Smart Recommendation: No user or no active video.");
@@ -891,6 +1043,10 @@ function goHome() {
     const searchInput = document.getElementById('globalSearch');
     if (searchInput) searchInput.value = "";
 
+    channelMatchResults = [];
+    currentChannelFilter = null;
+    renderSearchControls();
+
     // 4. קריאה לפונקציית טעינת הסרטונים
     // כשאנחנו קוראים לה ככה, היא כבר מאפסת את המשתנים (loadedVideosCount, hasMoreVideos)
     // בזכות בלוק ה- if (!isAppend) שכבר קיים אצלך בקוד!
@@ -949,7 +1105,7 @@ const searchInput = document.getElementById('globalSearch');
 
 // אירוע הקלדה (Input) - מפעיל טיימר של 1000 מילישניות
 searchInput.addEventListener('input', (e) => {
-    const query = e.target.value.trim();
+    const query = normalizeSearchTerm(e.target.value);
 
     // איפוס הטיימר הקודם בכל הקלדה חדשה
     clearTimeout(searchDebounceTimeout);
@@ -966,7 +1122,7 @@ searchInput.addEventListener('input', (e) => {
 // אירוע מקלדת (Keydown) - מזהה לחיצה על אנטר לביצוע מיידי
 searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-        const query = e.target.value.trim();
+        const query = normalizeSearchTerm(e.target.value);
         
         // ביטול הטיימר הממתין כדי שלא ירוץ החיפוש פעמיים
         clearTimeout(searchDebounceTimeout);
@@ -977,6 +1133,44 @@ searchInput.addEventListener('keydown', (e) => {
         triggerAnalytics(query);
     }
 });
+
+
+
+async function applyChannelFilter(channelName) {
+    if (!channelName) return;
+
+    const normalizedChannelName = normalizeSearchTerm(channelName);
+    if (!normalizedChannelName) return;
+
+    const searchInput = document.getElementById('globalSearch');
+    if (searchInput) searchInput.value = normalizedChannelName;
+
+    currentChannelFilter = normalizedChannelName;
+    currentSearchQuery = normalizedChannelName;
+    currentAppMode = 'home';
+
+    await fetchVideos(normalizedChannelName, false, { preserveChannelFilter: true });
+}
+
+
+function applyChannelFilterByName(encodedChannelName) {
+    try {
+        const decoded = decodeURIComponent(atob(encodedChannelName));
+        applyChannelFilter(decoded);
+    } catch (err) {
+        console.error('Failed to decode channel name:', err);
+    }
+}
+
+function toggleSearchPlaybackPin() {
+    isSearchPlaybackPinned = !isSearchPlaybackPinned;
+    pinnedSearchResults = isSearchPlaybackPinned ? [...displayResults] : null;
+    renderSearchControls();
+}
+
+window.applyChannelFilter = applyChannelFilter;
+window.applyChannelFilterByName = applyChannelFilterByName;
+window.toggleSearchPlaybackPin = toggleSearchPlaybackPin;
 
 window.playNextVideo = async function() {
     console.log("מדלג לסרטון הבא (מתעדף המלצה חכמה)...");
@@ -1031,4 +1225,5 @@ function triggerAnalytics(query) {
 
 
 
+renderSearchControls();
 init();
