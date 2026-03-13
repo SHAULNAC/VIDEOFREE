@@ -536,6 +536,7 @@ async function fetchVideos(query = "", isAppend = false, options = {}) {
     let fetchedData = null;
 
     if (currentChannelFilter) {
+        // חיפוש ממוקד ערוץ
         const { data } = await client.from('videos')
             .select('id, title, channel_title, thumbnail, duration, views, likes, category_id')
             .ilike('channel_title', currentChannelFilter)
@@ -543,18 +544,21 @@ async function fetchVideos(query = "", isAppend = false, options = {}) {
             .range(from, to);
         fetchedData = data || [];
     } else if (!currentSearchQuery) {
+        // דף הבית - סרטונים אחרונים
         const { data } = await client.from('videos')
             .select('id, title, channel_title, thumbnail, duration, views, likes, category_id')
             .order('published_at', { ascending: false })
             .range(from, to);
         fetchedData = data;
     } else {
+        // חיפוש טקסט חופשי
         const cleanQuery = currentSearchQuery.replace(/[^\w\sא-ת]/g, ' ').trim();
         const { data } = await client.rpc('search_videos_prioritized', { search_term: cleanQuery })
             .range(from, to);
         fetchedData = data || [];
 
         if (!isAppend) {
+            // זיהוי ערוצים ראשוני לפי השאילתה המקורית
             channelMatchResults = await detectChannelMatches(cleanQuery);
 
             clearTimeout(debounceTimeout);
@@ -563,16 +567,70 @@ async function fetchVideos(query = "", isAppend = false, options = {}) {
 
                 const translated = await getTranslationWithDB(cleanQuery);
                 if (translated && translated.toLowerCase() !== cleanQuery.toLowerCase()) {
-                    const { data: transData } = await client.rpc('search_videos_prioritized', { search_term: translated }).range(0, VIDEOS_PER_PAGE - 1);
+                    
+                    // --- תוספת: חיפוש ערוצים גם לפי התרגום ---
+                    const translatedChannels = await detectChannelMatches(translated);
+                    
+                    // מיזוג תוצאות: מוסיפים רק ערוצים מהתרגום שלא הופיעו בחיפוש המקורי
+                    const existingNames = new Set(channelMatchResults.map(c => normalizeChannelKey(c.name)));
+                    translatedChannels.forEach(tc => {
+                        if (!existingNames.has(normalizeChannelKey(tc.name))) {
+                            channelMatchResults.push(tc);
+                        }
+                    });
+                    
+                    // הגבלה ל-12 תוצאות ורענון התצוגה של כרטיסי הערוצים
+                    channelMatchResults = channelMatchResults.slice(0, 12);
+                    renderSearchControls();
+
+                    // חיפוש סרטונים לפי התרגום
+                    const { data: transData } = await client.rpc('search_videos_prioritized', { search_term: translated })
+                        .range(0, VIDEOS_PER_PAGE - 1);
+                    
                     if (searchToken !== currentSearchToken || currentChannelFilter) return;
+                    
                     if (transData && transData.length > 0) {
-                        renderVideoGrid(transData, true); 
+                        renderVideoGrid(transData, true); // הוספה לתוצאות הקיימות
                     }
                 }
             }, 800);
         }
-        
     }
+
+    if (searchToken !== currentSearchToken) {
+        isLoadingVideos = false;
+        return;
+    }
+
+    renderSearchControls();
+
+    if (fetchedData && fetchedData.length > 0) {
+        renderVideoGrid(fetchedData, isAppend);
+        if (playbackMode === 'playlist' && !isAppend) pinnedSearchResults = [...displayResults];
+        loadedVideosCount += fetchedData.length;
+        
+        if (fetchedData.length < VIDEOS_PER_PAGE) {
+            hasMoreVideos = false;
+        }
+    } else {
+        if (!isAppend) {
+            renderVideoGrid([]);
+            if (playbackMode === 'playlist') pinnedSearchResults = [];
+        }
+        hasMoreVideos = false;
+    }
+
+    isLoadingVideos = false;
+    saveAppState();
+
+    if (currentPlayingId) {
+        updateMediaSessionMetadata({ 
+            id: currentPlayingId, 
+            t: document.getElementById('current-title')?.textContent, 
+            c: document.getElementById('current-channel')?.textContent 
+        });
+    }
+}
     
 
     if (searchToken !== currentSearchToken) {
@@ -908,13 +966,13 @@ async function fetchSmartRecommendation() {
 
         // שלב ג': קריאה ל-RPC
         const { data: recommendations, error: rpcError } = await client.rpc('get_smart_recommendations', {
-            p_user_id: currentUser.id,
-            p_current_video_id: currentPlayingId,
-            p_category_id: currentVid.category_id,
-            p_current_tags: tagsString, 
-            p_channel_title: currentVid.channel_title// שליחה כטקסט נקי
-            p_limit: 1 
-        });
+    p_user_id: currentUser.id,
+    p_current_video_id: currentPlayingId,
+    p_category_id: currentVid.category_id,
+    p_current_tags: tagsString, 
+    p_channel_title: currentVid.channel_title, // הוספת פסיק כאן
+    p_limit: 1 
+});
 
         if (rpcError) {
             console.error("RPC Error details:", rpcError);
