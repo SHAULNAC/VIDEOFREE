@@ -212,9 +212,11 @@ body {
 }
 
 .brand-icon-main {
-    width: 70px;
+    width: 100px; /* הגדלתי מעט מ-70px, שנה לפי הצורך */
+    height: auto; /* שומר על יחס גובה-רוחב תקין */
     margin-bottom: 15px;
-    filter: drop-shadow(0 4px 10px rgba(29, 185, 84, 0.3));
+    /* שינוי צבע הזוהר לכתום עם שקיפות קלה למראה טבעי */
+    filter: drop-shadow(0 4px 12px rgba(233, 104, 13, 0.4));
 }
 
 .brand-title-main {
