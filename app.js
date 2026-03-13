@@ -363,7 +363,26 @@ function createChannelSearchVariants(text) {
     const variants = new Set([normalized]);
     const withoutVav = normalized.replace(/ו/g, '');
     if (withoutVav) variants.add(withoutVav);
+    const latinOnly = normalized.match(/[A-Za-z0-9 ]+/g)?.join(' ').trim();
+    if (latinOnly) variants.add(latinOnly);
     return [...variants].filter(Boolean);
+}
+
+function createTranslatedSearchVariants(text) {
+    const normalized = normalizeSearchTerm(text);
+    if (!normalized) return [];
+    const chunks = normalized
+        .split(/[|,/]/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+    const expanded = new Set();
+    chunks.forEach((chunk) => {
+        createChannelSearchVariants(chunk).forEach((variant) => expanded.add(variant));
+    });
+
+    createChannelSearchVariants(normalized).forEach((variant) => expanded.add(variant));
+    return [...expanded].filter(Boolean);
 }
 
 function escapeForLike(text) {
@@ -375,7 +394,7 @@ async function detectChannelMatches(query) {
     if (!normalized || normalized.length < 2) return [];
 
     try {
-        const variants = createChannelSearchVariants(normalized).map((v) => escapeForLike(v));
+        const variants = createTranslatedSearchVariants(normalized).map((v) => escapeForLike(v));
         const orQuery = variants.map((v) => `channel_title.ilike.%${v}%`).join(',');
 
         const { data, error } = await client
@@ -492,16 +511,23 @@ function renderSearchControls() {
         `
         : '';
 
+    const modeHelpText = playbackIsPlaylist
+        ? 'מצב פלייליסט: מנגן ברצף את תוצאות החיפוש הנוכחיות'
+        : 'מצב חכם: בוחר עבורך סרטון מומלץ אוטומטית בסיום הניגון';
+
     const modeToggle = `
         <div class="search-controls-top">
             <span class="playback-mode-label">${modeLabel}</span>
-            <button class="playback-toggle ${playbackIsPlaylist ? 'playlist' : 'smart'}" onclick="togglePlaybackMode()" title="החלף מצב הפעלה" aria-label="החלף מצב הפעלה">
-                <span class="playback-toggle-track">
-                    <span class="playback-toggle-thumb"></span>
-                </span>
-                <span class="playback-toggle-text-left">פלייליסט</span>
-                <span class="playback-toggle-text-right">חכם</span>
-            </button>
+            <div class="playback-toggle-wrap ${playbackIsPlaylist ? 'mode-playlist' : 'mode-smart'}">
+                <span class="playback-toggle-icon playback-toggle-icon-left" aria-hidden="true"><i class="fa-solid fa-list-ul"></i></span>
+                <button class="playback-toggle ${playbackIsPlaylist ? 'playlist' : 'smart'}" onclick="togglePlaybackMode()" title="${modeHelpText}" aria-label="${modeHelpText}">
+                    <span class="playback-toggle-track">
+                        <span class="playback-toggle-thumb"></span>
+                    </span>
+                </button>
+                <span class="playback-toggle-icon playback-toggle-icon-right" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                <span class="playback-toggle-hint">${modeHelpText}</span>
+            </div>
         </div>
     `;
 
