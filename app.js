@@ -571,7 +571,7 @@ async function fetchVideos(query = "", isAppend = false, options = {}) {
                     // --- תוספת: חיפוש ערוצים גם לפי התרגום ---
                     const translatedChannels = await detectChannelMatches(translated);
                     
-                    // מיזוג תוצאות: מוסיפים רק ערוצים מהתרגום שלא הופיעו בחיפוש המקורי
+                    // מיזוג תוצאות
                     const existingNames = new Set(channelMatchResults.map(c => normalizeChannelKey(c.name)));
                     translatedChannels.forEach(tc => {
                         if (!existingNames.has(normalizeChannelKey(tc.name))) {
@@ -579,7 +579,6 @@ async function fetchVideos(query = "", isAppend = false, options = {}) {
                         }
                     });
                     
-                    // הגבלה ל-12 תוצאות ורענון התצוגה של כרטיסי הערוצים
                     channelMatchResults = channelMatchResults.slice(0, 12);
                     renderSearchControls();
 
@@ -590,7 +589,7 @@ async function fetchVideos(query = "", isAppend = false, options = {}) {
                     if (searchToken !== currentSearchToken || currentChannelFilter) return;
                     
                     if (transData && transData.length > 0) {
-                        renderVideoGrid(transData, true); // הוספה לתוצאות הקיימות
+                        renderVideoGrid(transData, true); 
                     }
                 }
             }, 800);
@@ -631,47 +630,11 @@ async function fetchVideos(query = "", isAppend = false, options = {}) {
         });
     }
 }
-    
-
-    if (searchToken !== currentSearchToken) {
-        isLoadingVideos = false;
-        return;
-    }
-
-    renderSearchControls();
-
-    if (fetchedData && fetchedData.length > 0) {
-        renderVideoGrid(fetchedData, isAppend);
-        if (playbackMode === 'playlist' && !isAppend) pinnedSearchResults = [...displayResults];
-        loadedVideosCount += fetchedData.length;
-        
-        if (fetchedData.length < VIDEOS_PER_PAGE) {
-            hasMoreVideos = false;
-        }
-    } else {
-        if (!isAppend) {
-            renderVideoGrid([]);
-            if (playbackMode === 'playlist') pinnedSearchResults = [];
-        }
-        hasMoreVideos = false;
-    }
-
-    isLoadingVideos = false;
-    saveAppState();
-
-    if (currentPlayingId) updateMediaSessionMetadata({ id: currentPlayingId, t: document.getElementById('current-title')?.textContent, c: document.getElementById('current-channel')?.textContent });
-}
-
-// הגדרות טבלת התרגומים (שנה אותן לפי מה שהגדרת ב-Supabase)
-const TRANSLATION_TABLE = 'translation_cache'; // שם הטבלה
-const COL_ORIGINAL = 'original_text';             // עמודת מונח המקור (עברית)
-const COL_TRANSLATED = 'translated_text';          // עמודת התרגום (אנגלית)
 
 async function getTranslationWithDB(text) {
     if (!text) return null;
     
     try {
-        // 1. בדיקה אם המונח כבר קיים במסד הנתונים
         const { data: existingTranslation, error: fetchError } = await client
             .from(TRANSLATION_TABLE)
             .select(COL_TRANSLATED)
@@ -682,23 +645,17 @@ async function getTranslationWithDB(text) {
             return existingTranslation[COL_TRANSLATED];
         }
 
-        // 2. פנייה לגוגל עם בקשה לתרגום (dt=t) ותעתיק (dt=rm)
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=iw&tl=en&dt=t&dt=rm&q=${encodeURI(text)}`;
         const res = await fetch(url);
         const data = await res.json();
 
-        // חילוץ התרגום המילולי (למשל: Good day)
         const translation = data[0][0][0];
         
-        // חילוץ התעתיק הפונטי (למשל: yom tov)
-        // בדרך כלל המידע נמצא במיקום הזה במערך של גוגל
         let transliteration = "";
         if (data[0][1] && (data[0][1][3] || data[0][1][2])) {
             transliteration = data[0][1][3] || data[0][1][2];
         }
 
-        // 3. שילוב של שניהם למחרוזת אחת שתשמר ב-DB
-        // אנחנו שומרים "Good day yom tov" כדי שהחיפוש ימצא את שניהם
         const combinedResult = transliteration 
             ? `${translation} ${transliteration}` 
             : translation;
@@ -718,7 +675,6 @@ async function getTranslationWithDB(text) {
         return null;
     }
 }
-
 // --- רינדור ---
 
 function renderVideoGrid(videos, isAppend = false) {
