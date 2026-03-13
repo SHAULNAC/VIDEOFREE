@@ -497,12 +497,16 @@ function renderSearchControls() {
 
                 return `
                     <button class="channel-card ${activeClass}" onclick="applyChannelFilterByName('${encodedName}')" title="הצג תוצאות מהערוץ בלבד">
-                        <div class="channel-card-thumb">
+                        <div class="channel-card-thumb v-thumb">
                             ${safeThumb ? `<img src="${safeThumb}" alt="${safeName}" loading="lazy">` : '<div class="channel-card-fallback"><i class="fa-solid fa-tv"></i></div>'}
                         </div>
-                        <div class="channel-card-info">
+                        <div class="channel-card-info v-info">
                             <h3>${safeName}</h3>
                             <p>${safeCountText}</p>
+                        </div>
+                        <div class="channel-card-footer card-footer">
+                            <span><i class="fa-solid fa-tv"></i> ערוץ</span>
+                            <span>סנן תוצאות</span>
                         </div>
                     </button>
                 `;
